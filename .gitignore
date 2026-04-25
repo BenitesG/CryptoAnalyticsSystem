@@ -1,0 +1,23 @@
+# Python
+venv/
+__pycache__/
+*.pyc
+
+# C#
+[Bb]in/
+[Oo]bj/
+*.user
+*.db
+*.db-shm
+*.db-wal
+
+# Mac/Windows
+.DS_Store
+Thumbs.db
+
+# Docker secrets
+.env
+
+# Ignorar configurações sensíveis
+appsettings.json
+appsettings.Development.json
