@@ -1,6 +1,8 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
 from typing import List
+import numpy as np
+import pandas as pd
 
 app = FastAPI()
 
@@ -13,19 +15,28 @@ class PriceHistoryRequest(BaseModel):
 class AnalyticsResponse(BaseModel):
     trend: str # "UP", "DOWN" or "STABLE"
     percentage_change: float
+    volatility: float 
 
 # Endpoint route
 @app.post("/analyze")
 async def analyze_prices(data: PriceHistoryRequest) -> AnalyticsResponse:
     # Se não mandarem preços suficientes, não tem como analisar
     if not data.prices or len(data.prices) < 2:
-        return AnalyticsResponse(trend="STABLE", percentage_change=0.0)
+        return AnalyticsResponse(trend="STABLE", percentage_change=0.0, volatility=0.0)
 
     first_price = data.prices[0]
     last_price = data.prices[-1]
 
     change = ((last_price - first_price) / first_price) * 100
     
+    # Calculate volatility as the standard deviation of the price changes
+    prices_array = np.array(data.prices)
+    volatility = float(np.std(prices_array))
+    
+    # Simple DataFrame for history (not strictly necessary, but can be useful for more complex analyses)
+    df = pd.DataFrame(data.prices, columns=['Price'])
+    df.to_csv(f"{data.coin_name}_history.csv", index=False)
+
     # defining thresholds for trend classification
     if change > 1.0:
         trend = "UP"
@@ -35,4 +46,4 @@ async def analyze_prices(data: PriceHistoryRequest) -> AnalyticsResponse:
         trend = "STABLE"
 
     # round to 2 decimal places for better readability
-    return AnalyticsResponse(trend=trend, percentage_change=round(change, 2))
+    return AnalyticsResponse(trend=trend, percentage_change=round(change, 2), volatility=round(volatility, 2))

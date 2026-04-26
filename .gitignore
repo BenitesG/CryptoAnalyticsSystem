@@ -21,3 +21,6 @@ Thumbs.db
 # Ignorar configurações sensíveis
 appsettings.json
 appsettings.Development.json
+
+# Dados exportados pelo Python
+*.csv
