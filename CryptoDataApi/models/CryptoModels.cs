@@ -25,6 +25,7 @@ namespace CryptoDataApi.Models
         public string CoinName { get; set; } = string.Empty;
         [JsonPropertyName("prices")]
         public List<decimal> Prices { get; set; } = new List<decimal>();
+
     }
 
     public class PythonAnalyzeResponse
@@ -34,5 +35,8 @@ namespace CryptoDataApi.Models
 
         [JsonPropertyName("percentage_change")]
         public decimal PercentageChange { get; set; }
+        
+        [JsonPropertyName("volatility")]
+        public decimal Volatility { get; set; }
     }
 }
