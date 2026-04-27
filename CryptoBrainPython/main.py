@@ -2,8 +2,6 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 from typing import List
 import numpy as np
-import pandas as pd
-
 app = FastAPI()
 
 # C# Response model:
@@ -33,10 +31,6 @@ async def analyze_prices(data: PriceHistoryRequest) -> AnalyticsResponse:
     prices_array = np.array(data.prices)
     volatility = float(np.std(prices_array))
     
-    # Simple DataFrame for history (not strictly necessary, but can be useful for more complex analyses)
-    df = pd.DataFrame(data.prices, columns=['Price'])
-    df.to_csv(f"{data.coin_name}_history.csv", index=False)
-
     # defining thresholds for trend classification
     if change > 1.0:
         trend = "UP"
