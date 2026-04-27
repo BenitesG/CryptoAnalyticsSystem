@@ -22,6 +22,11 @@ This project implements a **Separation of Concerns** pattern, dividing transacti
    - Containerized relational database.
    - Stores search logs and audit trails using Entity Framework Core (Code-First approach).
 
+4. **Data Visualization Frontend (Python / Streamlit)**
+   - An interactive dashboard providing a user-friendly interface.
+   - Allows users to search for cryptocurrencies and view analytical cards (Average, Max, Volatility, and Trend).
+   - Generates and streams downloadable CSV reports in-memory without polluting the server disk.
+
 ## 🚀 Tech Stack
 
 - **Backend (Transational):** C# .NET 8, ASP.NET Core Minimal APIs
@@ -30,6 +35,7 @@ This project implements a **Separation of Concerns** pattern, dividing transacti
 - **ORM:** Entity Framework Core (EF Core)
 - **Infrastructure:** Docker, Docker Compose
 - **Patterns Used:** Dependency Injection, In-Memory Caching, DTOs, Asynchronous Programming.
+- **Frontend:** Python, Streamlit, Pandas
 
 ## ⚙️ Configuration
 
