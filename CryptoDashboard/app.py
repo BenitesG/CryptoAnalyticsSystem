@@ -1,7 +1,7 @@
 import streamlit as st
 import requests
 import pandas as pd
-import plotly.express as px # NÃO ESQUEÇA ESTE IMPORT!
+import plotly.express as px
 
 # Visual configurations
 st.set_page_config(page_title="Crypto Analytics", layout="wide")
