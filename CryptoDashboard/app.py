@@ -1,10 +1,11 @@
 import streamlit as st
 import requests
 import pandas as pd
+import plotly.express as px # NÃO ESQUEÇA ESTE IMPORT!
 
 # Visual configurations
 st.set_page_config(page_title="Crypto Analytics", layout="wide")
-st.title("📊 Dashboard Crypto Analysis ")
+st.title("📊 Dashboard Crypto Analysis")
 st.markdown("Search for any cryptocurrency and get insights about its recent performance! Powered by CoinGecko API and a C# backend.")
 
 # User interactions
@@ -17,7 +18,7 @@ with st.sidebar:
 if btn_search:
     with st.spinner(f"Searching crypto: {coin.capitalize()}..."):
         
-        # Need your port on localhost C# API to fetch the data (make sure it's running before testing this Streamlit app)
+        # Sua porta do C# (5091)
         url_api_csharp = f"http://localhost:5091/price/{coin}/history" 
         
         try:
@@ -27,7 +28,7 @@ if btn_search:
                 complete_date = response.json()
                 analysis = complete_date["last_7_days"]
                 
-                st.success("✅ Dates retrieved successfully!")
+                st.success("✅ Data retrieved successfully!")
                 
                 col1, col2, col3, col4 = st.columns(4)
                 
@@ -39,19 +40,40 @@ if btn_search:
                 tendencia_sinal = analysis['percentage_change']
                 col3.metric("Trend", analysis['trend'], f"{tendencia_sinal}%")
                 
-                col4.metric("Volatility (Risk)", fmt.format(analysis     ['volatility']))
+                col4.metric("Volatility (Risk)", fmt.format(analysis['volatility']))
                 
-                # Download report as CSV
-                df_export = pd.DataFrame([analysis])
-                csv_file = df_export.to_csv(index=False).encode('utf-8')
+                st.markdown("---") 
+                st.subheader(f"📈 Price Curve (Last 7 days)")
                 
-                st.markdown("---")
-                st.download_button(
-                    label="📥 Download Report (CSV)",
-                    data=csv_file,
-                    file_name=f"report_{coin}.csv",
-                    mime="text/csv",
-                )
+                precos_historicos = analysis.get("prices", [])
+                
+                if precos_historicos:
+                    df_grafico = pd.DataFrame({
+                        "Hours (Last 7 Days)": range(len(precos_historicos)),
+                        "Price (USD)": precos_historicos
+                    })
+
+                    fig = px.line(
+                        df_grafico, 
+                        x="Hours (Last 7 Days)", 
+                        y="Price (USD)", 
+                        color_discrete_sequence=["#00FFAA"] 
+                    )
+                    
+                    fig.update_layout(plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)")
+                    st.plotly_chart(fig, use_container_width=True)
+
+                    csv_file = df_grafico.to_csv(index=False).encode('utf-8')
+                    
+                    st.markdown("---")
+                    st.download_button(
+                        label="📥 Download Report (CSV)",
+                        data=csv_file,
+                        file_name=f"report_{coin}.csv",
+                        mime="text/csv",
+                    )
+                else:
+                    st.warning("Historical data not available for this coin.")
                 
             else:
                 st.error("❌ Cryptocurrency not found in CoinGecko's database.")

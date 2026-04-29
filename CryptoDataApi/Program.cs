@@ -2,6 +2,8 @@ using CryptoDataApi.Services;
 using CryptoDataApi.Data;
 using Microsoft.EntityFrameworkCore;
 using CryptoDataApi.Models;
+using Polly;
+using Polly.Extensions.Http;
 
 // See https://aka.ms/new-console-template for more information
 var builder = WebApplication.CreateBuilder(args);
@@ -9,11 +11,22 @@ builder.Services.AddMemoryCache();
 
 // Register API DB service
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
-builder.Services.AddHttpClient<CoinGeckoService>();
+builder.Services.AddHttpClient<CoinGeckoService>()
+    .AddTransientHttpErrorPolicy(policyBuilder => 
+        policyBuilder.WaitAndRetryAsync(3, tentativa => TimeSpan.FromSeconds(Math.Pow(2, tentativa)))
+    );
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(connectionString));
 
 var app = builder.Build();
+
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
 
 using (var scope = app.Services.CreateScope())
 {

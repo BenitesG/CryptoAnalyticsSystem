@@ -60,7 +60,8 @@ namespace CryptoDataApi.Services
                     min = Math.Round(apenasPrecos.Min(), 2),
                     volatility = analiseDoCerebro?.Volatility,
                     trend = analiseDoCerebro?.Trend,                 
-                    percentage_change = analiseDoCerebro?.PercentageChange
+                    percentage_change = analiseDoCerebro?.PercentageChange,
+                    prices = analiseDoCerebro?.HistoricalPrices,
                 };
 
             });
