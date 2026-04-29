@@ -18,8 +18,8 @@ with st.sidebar:
 if btn_search:
     with st.spinner(f"Searching crypto: {coin.capitalize()}..."):
         
-        # Sua porta do C# (5091)
-        url_api_csharp = f"http://localhost:5091/price/{coin}/history" 
+        # C# API endpoint (port 5091)
+        url_api_csharp = f"http://localhost:5091/price/{coin}/history"
         
         try:
             response = requests.get(url_api_csharp)
