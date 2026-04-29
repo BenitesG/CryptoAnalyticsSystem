@@ -3,7 +3,6 @@ using CryptoDataApi.Data;
 using Microsoft.EntityFrameworkCore;
 using CryptoDataApi.Models;
 using Polly;
-using Polly.Extensions.Http;
 
 // See https://aka.ms/new-console-template for more information
 var builder = WebApplication.CreateBuilder(args);
