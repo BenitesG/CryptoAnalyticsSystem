@@ -61,7 +61,7 @@ namespace CryptoDataApi.Services
                     volatility = analiseDoCerebro?.Volatility,
                     trend = analiseDoCerebro?.Trend,                 
                     percentage_change = analiseDoCerebro?.PercentageChange,
-                    prices = analiseDoCerebro?.HistoricalPrices
+                    prices = analiseDoCerebro?.HistoricalPrices,
                 };
 
             });
