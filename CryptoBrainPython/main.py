@@ -11,16 +11,17 @@ class PriceHistoryRequest(BaseModel):
 
 # Analysis response
 class AnalyticsResponse(BaseModel):
-    trend: str # "UP", "DOWN" or "STABLE"
+    trend: str 
     percentage_change: float
-    volatility: float 
+    volatility: float
+    historical_prices: List[float]
 
 # Endpoint route
 @app.post("/analyze")
 async def analyze_prices(data: PriceHistoryRequest) -> AnalyticsResponse:
     # Se não mandarem preços suficientes, não tem como analisar
     if not data.prices or len(data.prices) < 2:
-        return AnalyticsResponse(trend="STABLE", percentage_change=0.0, volatility=0.0)
+        return AnalyticsResponse(trend="STABLE", percentage_change=0.0, volatility=0.0, historical_prices=[])
 
     first_price = data.prices[0]
     last_price = data.prices[-1]
@@ -40,4 +41,9 @@ async def analyze_prices(data: PriceHistoryRequest) -> AnalyticsResponse:
         trend = "STABLE"
 
     # round to 2 decimal places for better readability
-    return AnalyticsResponse(trend=trend, percentage_change=round(change, 2), volatility=round(volatility, 2))
+    return AnalyticsResponse(
+        trend=trend, 
+        percentage_change=round(change, 2), 
+        volatility=round(volatility, 2),
+        historical_prices=data.prices # Devolvendo a lista intacta!
+    )

@@ -1,6 +1,7 @@
 import streamlit as st
 import requests
 import pandas as pd
+import plotly.express as px
 
 # Visual configurations
 st.set_page_config(page_title="Crypto Analytics", layout="wide")
@@ -41,10 +42,32 @@ if btn_search:
                 
                 col4.metric("Volatility (Risk)", fmt.format(analysis     ['volatility']))
                 
-                # Download report as CSV
-                df_export = pd.DataFrame([analysis])
-                csv_file = df_export.to_csv(index=False).encode('utf-8')
+                st.markdown("---") 
+                st.subheader(f"📈 Price Curve (Last 7 Days)")
+
+                history_prices = analysis.get("prices", [])
                 
+
+                if history_prices:
+                    df_grafico = pd.DataFrame({
+                        "Hours (Last 7 Days)": range(len(history_prices)),
+                        "Price (USD)": history_prices
+                    })
+
+                    fig = px.line(
+                        df_grafico, 
+                        x="Hours (Last 7 Days)", 
+                        y="Price (USD)", 
+                        color_discrete_sequence=["#00FFAA"] 
+                    )
+                    
+                    fig.update_layout(plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)")
+
+                    st.plotly_chart(fig, use_container_width=True)
+                else:
+                    st.warning("History data is not available for this cryptocurrency.")
+                
+                csv_file = df_grafico.to_csv(index=False).encode('utf-8')
                 st.markdown("---")
                 st.download_button(
                     label="📥 Download Report (CSV)",

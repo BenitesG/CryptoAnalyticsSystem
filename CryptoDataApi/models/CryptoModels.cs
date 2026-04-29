@@ -38,5 +38,8 @@ namespace CryptoDataApi.Models
         
         [JsonPropertyName("volatility")]
         public decimal Volatility { get; set; }
+
+        [JsonPropertyName("historical_prices")]
+        public List<decimal> HistoricalPrices { get; set; } = new List<decimal>();
     }
 }
