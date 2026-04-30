@@ -5,7 +5,7 @@ using Microsoft.Extensions.Caching.Memory;
 // Interact with coinGecko API and Python service, with caching to optimize performance
 namespace CryptoDataApi.Services
 {
-    public class CoinGeckoService
+    public class CoinGeckoService : IMarketDataService
     {
         private readonly HttpClient _httpClient;
         private readonly IMemoryCache _cache;

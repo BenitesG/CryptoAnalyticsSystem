@@ -13,6 +13,7 @@ builder.Services.AddHttpClient<CoinGeckoService>()
     .AddTransientHttpErrorPolicy(policyBuilder => 
         policyBuilder.WaitAndRetryAsync(3, tentativa => TimeSpan.FromSeconds(Math.Pow(2, tentativa)))
     );
+builder.Services.AddTransient<IMarketDataService>(sp => sp.GetRequiredService<CoinGeckoService>());
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddDbContext<AppDbContext>(options =>
@@ -32,13 +33,13 @@ using (var scope = app.Services.CreateScope())
     db.Database.Migrate(); 
 }
 
-app.MapGet("/price/{coin}", async (CoinGeckoService cryptoService, string coin, AppDbContext db) => 
+app.MapGet("/price/{coin}", async (IMarketDataService cryptoService, string coin, AppDbContext db) => 
 {
     var price = await cryptoService.GetPriceAsync(coin);
 
     if (price == null) 
     {
-        return Results.NotFound(new { message = "Não foi possível obter o preço agora." });
+        return Results.NotFound(new { message = "Price not found." });
     }
 
     var log = new SearchLog
@@ -58,10 +59,10 @@ app.MapGet("/price/{coin}", async (CoinGeckoService cryptoService, string coin, 
     });
 });
 
-app.MapGet("/price/{coin}/history", async (string coin, CoinGeckoService cryptoservice) => 
+app.MapGet("/price/{coin}/history", async (string coin, IMarketDataService cryptoservice) => 
 {
     var history = await cryptoservice.GetHistoryAsync(coin);
-    if (history == null) return Results.NotFound("Histórico não encontrado.");
+    if (history == null) return Results.NotFound("History not found.");
     
 
     return Results.Ok(new {
