@@ -64,7 +64,13 @@ Navigate to the CryptoBrainPython folder, activate your virtual environment, and
 uvicorn main:app --port 8000 --reload
 ```
 
-### 3. Start the C# API
+### 3. Start the Interactive Dashboard (Frontend)
+Navigate to the `CryptoDashboard` folder, activate its virtual environment, and run:
+```bash
+streamlit run app.py
+```
+
+### 4. Start the C# API
 Navigate to the CryptoDataApi folder. Apply the database migrations and run the server:
 
 ```bash
@@ -73,7 +79,7 @@ dotnet run
 ```
 
 
-### 4. Test the Endpoints
+### 5. Test the Endpoints
 Open your browser or Postman and hit:
 
 - **Current Price: 
