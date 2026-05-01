@@ -9,15 +9,16 @@ namespace CryptoDataApi.Services
     {
         private readonly HttpClient _httpClient;
         private readonly IMemoryCache _cache;
+        private readonly ILogger<CoinGeckoService> _logger;
 
-        public CoinGeckoService(HttpClient httpClient, IMemoryCache cache)
+        public CoinGeckoService(HttpClient httpClient, IMemoryCache cache, ILogger<CoinGeckoService> logger)
         {
             _httpClient = httpClient;
             _cache = cache;
+            _logger = logger;
             _httpClient.DefaultRequestHeaders.Add("User-Agent", "CryptoDataApi");
         }   
 
-        // Get historical price data and analysis for a specific coin, with caching for 5 minutes
         public async Task<object?> GetHistoryAsync(string coin)
         {
             string cacheKey = $"hist_{coin}";
@@ -94,5 +95,7 @@ namespace CryptoDataApi.Services
 
             return dadosFinais;
         }
+
+        
     }
 }
