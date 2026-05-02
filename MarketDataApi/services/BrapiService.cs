@@ -1,10 +1,10 @@
-using MarketDataApi.Models;
+using MarketDataApi.Models; 
 using System.Text.Json;
 using Microsoft.Extensions.Caching.Memory;
+using System.Net; 
 
-namespace MarketDataApi.Services
+namespace MarketDataApi.Services 
 {
-    // Interact with Brapi API and Python service, with caching to optimize performance
     public class BrapiService : IMarketDataService
     {
         private readonly HttpClient _httpClient;
@@ -21,50 +21,56 @@ namespace MarketDataApi.Services
             _httpClient.DefaultRequestHeaders.Add("User-Agent", "MarketDataApi");
         }
 
-        // Search for the current price of a stock on B3 using Brapi
         public async Task<decimal?> GetPriceAsync(string ticker)
         {
-            _logger.LogInformation("Searching for price of {ticker} on B3 (Brapi)...", ticker);
+            _logger.LogInformation("Searching for price of {ticker} on B3...", ticker);
             string cacheKey = $"price_b3_{ticker}";
 
             return await _cache.GetOrCreateAsync<decimal?>(cacheKey, async (cacheOptions) =>
             {
                 cacheOptions.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(1);
-
                 var token = _config["Brapi:BrapiApiKey"];
-
-                string url = $"https://brapi.dev/api/quote/{ticker}?token={token}";
                 
-                var text = await _httpClient.GetStringAsync(url);
+                string url = $"https://brapi.dev/api/quote/{ticker.ToUpper()}?token={token}";
+                
+                var response = await _httpClient.GetAsync(url);
+                
+                if (response.StatusCode == HttpStatusCode.NotFound) 
+                {
+                    _logger.LogWarning("Ticker {ticker} not found on Brapi.", ticker);
+                    return null; 
+                }
+
+                response.EnsureSuccessStatusCode();
+
+                var text = await response.Content.ReadAsStringAsync();
                 var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
                 var data = JsonSerializer.Deserialize<BrapiResponse>(text, options);
 
-                // Return a list of results, but we only care about the first one (if it exists)
-                if (data?.Results != null && data.Results.Count > 0)
-                {
-                    return data.Results[0].RegularMarketPrice;
-                }
-                return (decimal?)null;
+                return data?.Results?.FirstOrDefault()?.RegularMarketPrice;
             });
         }
 
-        // Search for the historical price of a stock on B3 using Brapi, and analyze it with the Python service
         public async Task<object?> GetHistoryAsync(string ticker)
         {
+            _logger.LogInformation("Fetching history for {ticker} on B3...", ticker);
             string cacheKey = $"hist_b3_{ticker}";
 
             return await _cache.GetOrCreateAsync(cacheKey, async (cacheOptions) =>
             {
                 cacheOptions.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5);
-
                 var token = _config["Brapi:BrapiApiKey"];
-
-                string url = $"https://brapi.dev/api/quote/{ticker}?range=5d&interval=1d&token={token}";
+                string url = $"https://brapi.dev/api/quote/{ticker.ToUpper()}?range=5d&interval=1d&token={token}";
                 
-                var text = await _httpClient.GetStringAsync(url);
+                var response = await _httpClient.GetAsync(url);
+                
+                if (response.StatusCode == HttpStatusCode.NotFound) return null;
+                
+                response.EnsureSuccessStatusCode();
+
+                var text = await response.Content.ReadAsStringAsync();
                 var jsonOptions = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-                var data = JsonSerializer.Deserialize<BrapiResponse>(text
-                , jsonOptions);
+                var data = JsonSerializer.Deserialize<BrapiResponse>(text, jsonOptions);
 
                 if (data?.Results == null || data.Results.Count == 0) return null;
 
@@ -73,40 +79,36 @@ namespace MarketDataApi.Services
 
                 var onlyPrice = history.Select(h => h.Close).ToList();
 
-                // Re-use the same PythonAnalyzeRequest and PythonAnalyzeResponse classes we created para CoinGecko, since the structure it's the same
                 var requestPython = new PythonAnalyzeRequest
                 {
                     CoinName = ticker,
                     Prices = onlyPrice
                 };
 
-                PythonAnalyzeResponse? analysisResult;
-
-                try
+                try 
                 {
-                    var JsonContent = new StringContent(JsonSerializer.Serialize(requestPython), System.Text.Encoding.UTF8, "application/json");
-                    var pythonResponse = await _httpClient.PostAsync("http://localhost:8000/analyze", JsonContent);
-
+                    var jsonContent = new StringContent(JsonSerializer.Serialize(requestPython), System.Text.Encoding.UTF8, "application/json");
+                    var pythonResponse = await _httpClient.PostAsync("http://localhost:8000/analyze", jsonContent);
                     pythonResponse.EnsureSuccessStatusCode();
 
                     var pythonText = await pythonResponse.Content.ReadAsStringAsync();
-                    analysisResult = JsonSerializer.Deserialize<PythonAnalyzeResponse>(pythonText, jsonOptions);
+                    var analysisResult = JsonSerializer.Deserialize<PythonAnalyzeResponse>(pythonText, jsonOptions);
+
+                    return new {
+                        average = Math.Round(onlyPrice.Average(), 2),
+                        max = Math.Round(onlyPrice.Max(), 2),
+                        min = Math.Round(onlyPrice.Min(), 2),
+                        volatility = analysisResult?.Volatility,
+                        trend = analysisResult?.Trend,                 
+                        percentage_change = analysisResult?.PercentageChange,
+                        prices = analysisResult?.HistoricalPrices,
+                    };
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Error calling Python analyze service for ticker {Ticker}", ticker);
-                    throw;
+                    _logger.LogError(ex, "Analytical Engine (Python) failed for {Ticker}", ticker);
+                    return null; 
                 }
-
-                return new {
-                    average = Math.Round(onlyPrice.Average(), 2),
-                    max = Math.Round(onlyPrice.Max(), 2),
-                    min = Math.Round(onlyPrice.Min(), 2),
-                    volatility = analysisResult?.Volatility,
-                    trend = analysisResult?.Trend,                 
-                    percentage_change = analysisResult?.PercentageChange,
-                    prices = analysisResult?.HistoricalPrices,
-                };
             });
         }
     }
