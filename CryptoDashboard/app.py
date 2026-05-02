@@ -3,54 +3,65 @@ import requests
 import pandas as pd
 import plotly.express as px
 
-# Visual configurations
-st.set_page_config(page_title="Crypto Analytics", layout="wide")
-st.title("📊 Dashboard Crypto Analysis")
-st.markdown("Search for any cryptocurrency and get insights about its recent performance! Powered by CoinGecko API and a C# backend.")
+# Visual configurations and title
+st.set_page_config(page_title="Market Analytics", layout="wide")
+st.title("📊 Market Analytics Dashboard")
+st.markdown("Welcome to the Market Analytics Dashboard! Here you can analyze the price trends of cryptocurrencies and stocks listed on B3. Select a market, enter the ticker or asset name, and get insights about the last 7 days of price movements, including average price, all-time high, trend, and volatility. You can also visualize the price curve and download a CSV report for further analysis.")
 
 # User interactions
 with st.sidebar:
     st.header("Configurations")
-    coin = st.text_input("Write the cryptocurrency name", value="bitcoin").lower()
-    btn_search = st.button("Market Analysis")
+    
+    market_type = st.radio("Select a Market:", ["Criptocurrency", "Ações/FIIs (B3)"])
+    
+    placeholder = "ex: bitcoin" if market_type == "Criptocurrency" else "ex: petr4"
+    ative = st.text_input("Enter the Ticker or Asset Name", placeholder=placeholder).lower()
+    
+    btn_search = st.button("🔍 Analyze")
 
 # Button logic
 if btn_search:
-    with st.spinner(f"Searching crypto: {coin.capitalize()}..."):
+    with st.spinner(f"Analyzing {ative.upper()}..."):
         
-        # C# API endpoint (port 5091)
-        url_api_csharp = f"http://localhost:5091/price/{coin}/history"
+        asset_type_url = "crypto" if market_type == "Criptocurrency" else "stock"
+
+        url_api_csharp = f"http://localhost:5091/price/{asset_type_url}/{ative}/history" 
         
         try:
             response = requests.get(url_api_csharp)
             
             if response.status_code == 200:
-                complete_date = response.json()
-                analysis = complete_date["last_7_days"]
+                complete_data = response.json()
+                analysis = complete_data["last_7_days"]
                 
                 st.success("✅ Data retrieved successfully!")
                 
-                col1, col2, col3, col4 = st.columns(4)
-                
+                # 1. Pegamos a lista e pescamos o último preço (o de hoje)
+                historical_prices = analysis.get("prices", [])
+                current_price = historical_prices[-1] if historical_prices else 0.0
+
                 fmt = "{:,.6f}" if analysis['average'] < 1 else "{:,.2f}"
                 
-                col1.metric("Average Price (7d)", f"${fmt.format(analysis['average'])}")
+                st.metric("Current price", f"${fmt.format(current_price)}", delta=f"{analysis['percentage_change']}%", delta_color="normal")
+                
+                st.markdown("---")
+                
+                st.subheader("Analysis of the Week (Last 7 Days)")
+                col1, col2, col3 = st.columns(3)
+                
+                col1.metric("Average Price", f"${fmt.format(analysis['average'])}")
                 col2.metric("All-Time High", f"${fmt.format(analysis['max'])}")
-                
-                tendencia_sinal = analysis['percentage_change']
-                col3.metric("Trend", analysis['trend'], f"{tendencia_sinal}%")
-                
-                col4.metric("Volatility (Risk)", fmt.format(analysis['volatility']))
+                col3.metric("Volatility (Risk)", fmt.format(analysis['volatility']))
                 
                 st.markdown("---") 
                 st.subheader(f"📈 Price Curve (Last 7 days)")
                 
-                precos_historicos = analysis.get("prices", [])
+                historical_prices = analysis.get("prices", [])
                 
-                if precos_historicos:
+                if historical_prices:
                     df_grafico = pd.DataFrame({
-                        "Hours (Last 7 Days)": range(len(precos_historicos)),
-                        "Price (USD)": precos_historicos
+                        "Hours (Last 7 Days)": range(len(historical_prices)),
+                        "Price (USD)": historical_prices
                     })
 
                     fig = px.line(
@@ -69,14 +80,18 @@ if btn_search:
                     st.download_button(
                         label="📥 Download Report (CSV)",
                         data=csv_file,
-                        file_name=f"report_{coin}.csv",
+                        file_name=f"report_{ative}.csv",
                         mime="text/csv",
                     )
                 else:
                     st.warning("Historical data not available for this coin.")
                 
             else:
-                st.error("❌ Cryptocurrency not found in CoinGecko's database.")
+                if asset_type_url == "crypto":
+                    st.error(f"❌ {ative.capitalize()} not found in database.")
+                    
+                elif asset_type_url == "stock":
+                    st.error(f"❌ {ative} not found in B3 (Brapi). Please check the ticker and try again.")
                 
         except Exception as e:
             st.error(f"⚠️ Connection error. Please check if the C# API is running! Details: {e}")
