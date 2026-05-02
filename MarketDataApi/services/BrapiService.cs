@@ -11,6 +11,7 @@ namespace MarketDataApi.Services
         private readonly IMemoryCache _cache;
         private readonly ILogger<BrapiService> _logger;
         private readonly IConfiguration _config;
+        private readonly string _brapiBaseUrl;
 
         public BrapiService(HttpClient httpClient, IMemoryCache cache, ILogger<BrapiService> logger, IConfiguration config)
         {
@@ -18,26 +19,29 @@ namespace MarketDataApi.Services
             _cache = cache;
             _logger = logger;
             _config = config;
+            _brapiBaseUrl = config["Brapi:BaseUrl"]
+                ?? throw new InvalidOperationException("Configuration 'Brapi:BaseUrl' is required.");
             _httpClient.DefaultRequestHeaders.Add("User-Agent", "MarketDataApi");
         }
 
         public async Task<decimal?> GetPriceAsync(string ticker)
         {
-            _logger.LogInformation("Searching for price of {ticker} on B3...", ticker);
-            string cacheKey = $"price_b3_{ticker}";
+            string normalizedTicker = ticker.Trim().ToUpperInvariant();
+            _logger.LogInformation("Searching for price of {ticker} on B3...", normalizedTicker);
+            string cacheKey = $"price_b3_{normalizedTicker}";
 
             return await _cache.GetOrCreateAsync<decimal?>(cacheKey, async (cacheOptions) =>
             {
                 cacheOptions.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(1);
                 var token = _config["Brapi:BrapiApiKey"];
-                
-                string url = $"https://brapi.dev/api/quote/{ticker.ToUpper()}?token={token}";
+
+                string url = $"{_brapiBaseUrl}/quote/{normalizedTicker}?token={token}";
                 
                 var response = await _httpClient.GetAsync(url);
                 
                 if (response.StatusCode == HttpStatusCode.NotFound) 
                 {
-                    _logger.LogWarning("Ticker {ticker} not found on Brapi.", ticker);
+                    _logger.LogWarning("Ticker {ticker} not found on Brapi.", normalizedTicker);
                     return null; 
                 }
 
@@ -53,14 +57,15 @@ namespace MarketDataApi.Services
 
         public async Task<object?> GetHistoryAsync(string ticker)
         {
-            _logger.LogInformation("Fetching history for {ticker} on B3...", ticker);
-            string cacheKey = $"hist_b3_{ticker}";
+            string normalizedTicker = ticker.Trim().ToUpperInvariant();
+            _logger.LogInformation("Fetching history for {ticker} on B3...", normalizedTicker);
+            string cacheKey = $"hist_b3_{normalizedTicker}";
 
             return await _cache.GetOrCreateAsync(cacheKey, async (cacheOptions) =>
             {
                 cacheOptions.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5);
                 var token = _config["Brapi:BrapiApiKey"];
-                string url = $"https://brapi.dev/api/quote/{ticker.ToUpper()}?range=5d&interval=1d&token={token}";
+                string url = $"{_brapiBaseUrl}/quote/{normalizedTicker}?range=5d&interval=1d&token={token}";
                 
                 var response = await _httpClient.GetAsync(url);
                 
@@ -81,7 +86,7 @@ namespace MarketDataApi.Services
 
                 var requestPython = new PythonAnalyzeRequest
                 {
-                    CoinName = ticker,
+                    CoinName = normalizedTicker,
                     Prices = onlyPrice
                 };
 
@@ -106,9 +111,9 @@ namespace MarketDataApi.Services
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Analytical Engine (Python) failed for {Ticker}", ticker);
+                    _logger.LogError(ex, "Analytical Engine (Python) failed for {Ticker}", normalizedTicker);
                     throw new HttpRequestException(
-                        $"Analytical Engine (Python) unavailable for {ticker}.",
+                        $"Analytical Engine (Python) unavailable for {normalizedTicker}.",
                         ex,
                         HttpStatusCode.ServiceUnavailable);
                 }
