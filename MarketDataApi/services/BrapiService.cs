@@ -37,7 +37,7 @@ namespace MarketDataApi.Services
 
                 string url = $"{_brapiBaseUrl}/quote/{normalizedTicker}?token={token}";
                 
-                var response = await _httpClient.GetAsync(url);
+                using var response = await _httpClient.GetAsync(url);
                 
                 if (response.StatusCode == HttpStatusCode.NotFound) 
                 {
@@ -67,7 +67,7 @@ namespace MarketDataApi.Services
                 var token = _config["Brapi:BrapiApiKey"];
                 string url = $"{_brapiBaseUrl}/quote/{normalizedTicker}?range=5d&interval=1d&token={token}";
                 
-                var response = await _httpClient.GetAsync(url);
+                using var response = await _httpClient.GetAsync(url);
                 
                 if (response.StatusCode == HttpStatusCode.NotFound) return null;
                 
@@ -93,7 +93,7 @@ namespace MarketDataApi.Services
                 try 
                 {
                     var jsonContent = new StringContent(JsonSerializer.Serialize(requestPython), System.Text.Encoding.UTF8, "application/json");
-                    var pythonResponse = await _httpClient.PostAsync("http://localhost:8000/analyze", jsonContent);
+                    using var pythonResponse = await _httpClient.PostAsync("http://localhost:8000/analyze", jsonContent);
                     pythonResponse.EnsureSuccessStatusCode();
 
                     var pythonText = await pythonResponse.Content.ReadAsStringAsync();

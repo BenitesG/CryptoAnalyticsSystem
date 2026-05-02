@@ -56,15 +56,24 @@ app.MapGet("/price/{assetType}/{symbol}", async (
     string symbol, 
     AppDbContext db) => 
 {
-    var cryptoService = serviceFactory(assetType); 
+    var normalizedAssetType = assetType.ToLowerInvariant();
+    if (normalizedAssetType != "crypto" && normalizedAssetType != "stock")
+    {
+        return Results.BadRequest(new
+        {
+            message = $"Unsupported asset type '{assetType}'. Supported values are: 'crypto', 'stock'."
+        });
+    }
 
-    var price = await cryptoService.GetPriceAsync(symbol);
+    var marketDataService = serviceFactory(normalizedAssetType); 
+
+    var price = await marketDataService.GetPriceAsync(symbol);
 
     if (price == null) 
     {
         return Results.NotFound(new 
         { 
-            message = $"Asset '{symbol.ToUpper()}' not found in the {assetType} market.",
+            message = $"Asset '{symbol.ToUpper()}' not found in the {normalizedAssetType} market.",
             suggestion = "Please check the ticker symbol and ensure you selected the correct market (Crypto vs B3)."
         });
     }
@@ -79,9 +88,13 @@ app.MapGet("/price/{assetType}/{symbol}", async (
     db.SearchLogs.Add(log);
     await db.SaveChangesAsync(); 
 
+    var currency = normalizedAssetType == "stock" ? "BRL" : "USD";
+
     return Results.Ok(new { 
-        coin = symbol,
-        price_usd = price,
+        symbol = symbol.ToUpperInvariant(),
+        assetType = normalizedAssetType,
+        price,
+        currency,
         timestamp = DateTime.UtcNow 
     });
 });
@@ -92,15 +105,25 @@ app.MapGet("/price/{assetType}/{symbol}/history", async (
     [FromServices] Func<string, IMarketDataService> serviceFactory)
 => 
 {
-    var cryptoService = serviceFactory(assetType);
-    var history = await cryptoService.GetHistoryAsync(symbol);
+    var normalizedAssetType = assetType.ToLowerInvariant();
+    if (normalizedAssetType != "crypto" && normalizedAssetType != "stock")
+    {
+        return Results.BadRequest(new
+        {
+            message = $"Unsupported asset type '{assetType}'. Supported values are: 'crypto', 'stock'."
+        });
+    }
+
+    var marketDataService = serviceFactory(normalizedAssetType);
+    var history = await marketDataService.GetHistoryAsync(symbol);
     if (history == null) return Results.NotFound(new {
-        message = $"History for asset '{symbol.ToUpper()}' not found in the {assetType} market.",
+        message = $"History for asset '{symbol.ToUpper()}' not found in the {normalizedAssetType} market.",
         suggestion = "Please check the ticker symbol and ensure you selected the correct market (Crypto vs B3)."
     });
 
     return Results.Ok(new {
-        coin = symbol,
+        symbol = symbol.ToUpperInvariant(),
+        assetType = normalizedAssetType,
         last_7_days = history,
     });
 });
