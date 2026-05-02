@@ -80,13 +80,23 @@ namespace CryptoDataApi.Services
                     Prices = onlyPrice
                 };
 
-                var JsonContent = new StringContent(JsonSerializer.Serialize(requestPython), System.Text.Encoding.UTF8, "application/json");
-                var pythonResponse = await _httpClient.PostAsync("http://localhost:8000/analyze", JsonContent);
-                
-                pythonResponse.EnsureSuccessStatusCode(); 
+                PythonAnalyzeResponse? analysisResult;
 
-                var pythonText = await pythonResponse.Content.ReadAsStringAsync();
-                var analysisResult = JsonSerializer.Deserialize<PythonAnalyzeResponse>(pythonText, jsonOptions);
+                try
+                {
+                    var JsonContent = new StringContent(JsonSerializer.Serialize(requestPython), System.Text.Encoding.UTF8, "application/json");
+                    var pythonResponse = await _httpClient.PostAsync("http://localhost:8000/analyze", JsonContent);
+
+                    pythonResponse.EnsureSuccessStatusCode();
+
+                    var pythonText = await pythonResponse.Content.ReadAsStringAsync();
+                    analysisResult = JsonSerializer.Deserialize<PythonAnalyzeResponse>(pythonText, jsonOptions);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error calling Python analyze service for ticker {Ticker}", ticker);
+                    throw;
+                }
 
                 return new {
                     average = Math.Round(onlyPrice.Average(), 2),
