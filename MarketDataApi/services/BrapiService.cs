@@ -107,7 +107,10 @@ namespace MarketDataApi.Services
                 catch (Exception ex)
                 {
                     _logger.LogError(ex, "Analytical Engine (Python) failed for {Ticker}", ticker);
-                    return null; 
+                    throw new HttpRequestException(
+                        $"Analytical Engine (Python) unavailable for {ticker}.",
+                        ex,
+                        HttpStatusCode.ServiceUnavailable);
                 }
             });
         }
