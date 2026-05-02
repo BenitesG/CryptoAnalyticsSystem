@@ -21,6 +21,10 @@ with st.sidebar:
 
 # Button logic
 if btn_search:
+    if not ative.strip(): 
+        st.error("⚠️ Por favor, digite o nome de um ativo!")
+        st.stop() 
+        
     with st.spinner(f"Analyzing {ative.upper()}..."):
         
         asset_type_url = "crypto" if market_type == "Criptocurrency" else "stock"
@@ -36,7 +40,6 @@ if btn_search:
                 
                 st.success("✅ Data retrieved successfully!")
                 
-                # 1. Pegamos a lista e pescamos o último preço (o de hoje)
                 historical_prices = analysis.get("prices", [])
                 current_price = historical_prices[-1] if historical_prices else 0.0
 
@@ -47,11 +50,16 @@ if btn_search:
                 st.markdown("---")
                 
                 st.subheader("Analysis of the Week (Last 7 Days)")
-                col1, col2, col3 = st.columns(3)
+                col1, col2, col3, col4 = st.columns(4)
+                
+                delta_val = f"{analysis['percentage_change']}%"
                 
                 col1.metric("Average Price", f"${fmt.format(analysis['average'])}")
                 col2.metric("All-Time High", f"${fmt.format(analysis['max'])}")
                 col3.metric("Volatility (Risk)", fmt.format(analysis['volatility']))
+                
+                delta_color = "normal" if analysis['trend'] == "UP" else "inverse"
+                col4.metric("Tendency", analysis['trend'], delta=delta_val, delta_color=delta_color)
                 
                 st.markdown("---") 
                 st.subheader(f"📈 Price Curve (Last 7 days)")

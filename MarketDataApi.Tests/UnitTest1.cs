@@ -1,6 +1,6 @@
-using CryptoDataApi.Models; // Importa os models da sua API
+using MarketDataApi.Models; // Importa os models da sua API
 
-namespace CryptoDataApi.Tests;
+namespace MarketDataApi.Tests;
 
 public class SearchLogTests
 {

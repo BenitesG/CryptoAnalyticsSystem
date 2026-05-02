@@ -1,7 +1,7 @@
-using CryptoDataApi.Services;
-using CryptoDataApi.Data;
+using MarketDataApi.Services;
+using MarketDataApi.Data;
 using Microsoft.EntityFrameworkCore;
-using CryptoDataApi.Models;
+using MarketDataApi.Models;
 using Polly;
 
 // See https://aka.ms/new-console-template for more information

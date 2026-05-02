@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace CryptoDataApi.Models
+namespace MarketDataApi.Models
 {
     // Map class
     public class BrapiResponse

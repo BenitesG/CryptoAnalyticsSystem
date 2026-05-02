@@ -21,7 +21,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\CryptoDataApi\CryptoDataApi.csproj" />
+    <ProjectReference Include="..\MarketDataApi\MarketDataApi.csproj" />
   </ItemGroup>
 
 </Project>

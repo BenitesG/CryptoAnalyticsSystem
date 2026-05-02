@@ -1,8 +1,8 @@
-using CryptoDataApi.Models;
+using MarketDataApi.Models;
 using System.Text.Json;
 using Microsoft.Extensions.Caching.Memory;
 
-namespace CryptoDataApi.Services
+namespace MarketDataApi.Services
 {
     // Interact with Brapi API and Python service, with caching to optimize performance
     public class BrapiService : IMarketDataService
@@ -18,7 +18,7 @@ namespace CryptoDataApi.Services
             _cache = cache;
             _logger = logger;
             _config = config;
-            _httpClient.DefaultRequestHeaders.Add("User-Agent", "CryptoDataApi");
+            _httpClient.DefaultRequestHeaders.Add("User-Agent", "MarketDataApi");
         }
 
         // Search for the current price of a stock on B3 using Brapi

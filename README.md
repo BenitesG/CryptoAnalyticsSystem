@@ -40,7 +40,7 @@ This project implements a **Separation of Concerns** pattern, dividing transacti
 
 Before running the application, you need to configure your database credentials and API Keys:
 
-1. Locate the `CryptoDataApi` folder.
+1. Locate the `MarketDataApi` folder.
 2. Copy `appsettings.example.json` to `appsettings.json`.
 3. Open `appsettings.json` and update the `DefaultConnection` string with your PostgreSQL credentials.
 4. Add your free API Keys for the data providers (e.g., Brapi API Key).
@@ -68,7 +68,7 @@ streamlit run app.py
 ```
 
 ### 4. Start the C# API
-Navigate to the CryptoDataApi folder. Apply the database migrations and run the server:
+Navigate to the MarketDataApi folder. Apply the database migrations and run the server:
 
 ```bash
 dotnet ef database update

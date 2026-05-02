@@ -1,4 +1,4 @@
-namespace CryptoDataApi.Services
+namespace MarketDataApi.Services
 {
     public interface IMarketDataService
     {

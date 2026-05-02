@@ -1,9 +1,9 @@
-using CryptoDataApi.Models;
+using MarketDataApi.Models;
 using System.Text.Json;
 using Microsoft.Extensions.Caching.Memory;
 
 // Interact with coinGecko API and Python service, with caching to optimize performance
-namespace CryptoDataApi.Services
+namespace MarketDataApi.Services
 {
     public class CoinGeckoService : IMarketDataService
     {
@@ -16,7 +16,7 @@ namespace CryptoDataApi.Services
             _httpClient = httpClient;
             _cache = cache;
             _logger = logger;
-            _httpClient.DefaultRequestHeaders.Add("User-Agent", "CryptoDataApi");
+            _httpClient.DefaultRequestHeaders.Add("User-Agent", "MarketDataApi");
         }   
 
         public async Task<object?> GetHistoryAsync(string coin)

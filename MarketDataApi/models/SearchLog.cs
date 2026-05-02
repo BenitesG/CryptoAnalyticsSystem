@@ -1,7 +1,7 @@
 using System;
 
 // Models for database and API responses
-namespace CryptoDataApi.Models
+namespace MarketDataApi.Models
 {
     public class SearchLog
     {

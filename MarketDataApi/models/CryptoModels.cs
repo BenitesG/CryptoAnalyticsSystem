@@ -1,7 +1,7 @@
 using System;
 using System.Text.Json.Serialization;
 
-namespace CryptoDataApi.Models
+namespace MarketDataApi.Models
 {
     // CoinGecko API response models
     public class CoinGeckoResponse

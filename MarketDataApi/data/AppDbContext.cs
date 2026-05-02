@@ -1,7 +1,7 @@
-using CryptoDataApi.Models; 
+using MarketDataApi.Models; 
 using Microsoft.EntityFrameworkCore;
 
-namespace CryptoDataApi.Data
+namespace MarketDataApi.Data
 {   // DB Context
     public class AppDbContext : DbContext
     {

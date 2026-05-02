@@ -4,7 +4,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace CryptoDataApi.Migrations
+namespace MarketDataApi.Migrations
 {
     /// <inheritdoc />
     public partial class InitialPostgres : Migration
