@@ -3,6 +3,7 @@ using CryptoDataApi.Data;
 using Microsoft.EntityFrameworkCore;
 using CryptoDataApi.Models;
 using Polly;
+
 // See https://aka.ms/new-console-template for more information
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddMemoryCache();
@@ -13,7 +14,22 @@ builder.Services.AddHttpClient<CoinGeckoService>()
     .AddTransientHttpErrorPolicy(policyBuilder => 
         policyBuilder.WaitAndRetryAsync(3, tentativa => TimeSpan.FromSeconds(Math.Pow(2, tentativa)))
     );
-builder.Services.AddTransient<IMarketDataService>(sp => sp.GetRequiredService<CoinGeckoService>());
+
+builder.Services.AddHttpClient<BrapiService>()
+    .AddTransientHttpErrorPolicy(policyBuilder => 
+        policyBuilder.WaitAndRetryAsync(3, retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)))
+    );
+    
+builder.Services.AddTransient<Func<string, IMarketDataService>>(serviceProvider => assetType =>
+{
+    if (assetType.ToLower() == "stock")
+    {
+        return serviceProvider.GetRequiredService<BrapiService>();
+    }
+
+    return serviceProvider.GetRequiredService<CoinGeckoService>();
+});
+
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddDbContext<AppDbContext>(options =>
@@ -33,9 +49,11 @@ using (var scope = app.Services.CreateScope())
     db.Database.Migrate(); 
 }
 
-app.MapGet("/price/{coin}", async (IMarketDataService cryptoService, string coin, AppDbContext db) => 
+app.MapGet("/price/{assetType}/{symbol}", async (Func<string, IMarketDataService> serviceFactory, string assetType, string symbol, AppDbContext db) => 
 {
-    var price = await cryptoService.GetPriceAsync(coin);
+    var cryptoService = serviceFactory(assetType);
+
+    var price = await cryptoService.GetPriceAsync(symbol);
 
     if (price == null) 
     {
@@ -44,7 +62,7 @@ app.MapGet("/price/{coin}", async (IMarketDataService cryptoService, string coin
 
     var log = new SearchLog
     {
-        CoinName = coin,
+        CoinName = symbol,
         PriceUsd = price.Value,
         SearchDate = DateTime.UtcNow
     };
@@ -53,20 +71,21 @@ app.MapGet("/price/{coin}", async (IMarketDataService cryptoService, string coin
     await db.SaveChangesAsync(); 
 
     return Results.Ok(new { 
-        coin = coin,
+        coin = symbol,
         price_usd = price,
         timestamp = DateTime.UtcNow 
     });
 });
 
-app.MapGet("/price/{coin}/history", async (string coin, IMarketDataService cryptoservice) => 
+app.MapGet("/price/{assetType}/{symbol}/history", async (string assetType, string symbol, Func<string, IMarketDataService> serviceFactory) => 
 {
-    var history = await cryptoservice.GetHistoryAsync(coin);
+    var cryptoService = serviceFactory(assetType);
+    var history = await cryptoService.GetHistoryAsync(symbol);
     if (history == null) return Results.NotFound("History not found.");
     
 
     return Results.Ok(new {
-        coin = coin,
+        coin = symbol,
         last_7_days = history,
     });
 });

@@ -9,15 +9,16 @@ namespace CryptoDataApi.Services
     {
         private readonly HttpClient _httpClient;
         private readonly IMemoryCache _cache;
+        private readonly ILogger<CoinGeckoService> _logger;
 
-        public CoinGeckoService(HttpClient httpClient, IMemoryCache cache)
+        public CoinGeckoService(HttpClient httpClient, IMemoryCache cache, ILogger<CoinGeckoService> logger)
         {
             _httpClient = httpClient;
             _cache = cache;
+            _logger = logger;
             _httpClient.DefaultRequestHeaders.Add("User-Agent", "CryptoDataApi");
         }   
 
-        // Get historical price data and analysis for a specific coin, with caching for 5 minutes
         public async Task<object?> GetHistoryAsync(string coin)
         {
             string cacheKey = $"hist_{coin}";
@@ -26,14 +27,31 @@ namespace CryptoDataApi.Services
             {
                 opcoesDoCache.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5);
 
+                _logger.LogInformation("Cache miss for {CacheKey}. Fetching history from CoinGecko.", cacheKey);
+
                 string url = $"https://api.coingecko.com/api/v3/coins/{coin}/market_chart?vs_currency=usd&days=7";
-                var texto = await _httpClient.GetStringAsync(url);
+
+                string texto;
+                try
+                {
+                    texto = await _httpClient.GetStringAsync(url);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to fetch history from CoinGecko for coin {Coin}.", coin);
+                    throw;
+                }
+
                 var opcoesJson = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
 
                 // Deserialize the response to get price data
                 var dados = JsonSerializer.Deserialize<MarketChartResponse>(texto, opcoesJson);
 
-                if (dados?.Prices == null || dados.Prices.Count == 0) return null;
+                if (dados?.Prices == null || dados.Prices.Count == 0)
+                {
+                    _logger.LogWarning("No price data returned from CoinGecko for coin {Coin}.", coin);
+                    return null;
+                }
 
                 var apenasPrecos = dados.Prices.Select(p => p[1]).ToList();
 
@@ -45,9 +63,19 @@ namespace CryptoDataApi.Services
 
                 var conteudoJson = new StringContent(JsonSerializer.Serialize(requestProPython), System.Text.Encoding.UTF8, "application/json");
 
-                var respostaPython = await _httpClient.PostAsync("http://localhost:8000/analyze", conteudoJson);
+                _logger.LogInformation("Calling Python analyze service for coin {Coin}.", coin);
 
-                respostaPython.EnsureSuccessStatusCode(); 
+                HttpResponseMessage respostaPython;
+                try
+                {
+                    respostaPython = await _httpClient.PostAsync("http://localhost:8000/analyze", conteudoJson);
+                    respostaPython.EnsureSuccessStatusCode();
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to get analysis from Python service for coin {Coin}.", coin);
+                    throw;
+                }
 
                 var textoPython = await respostaPython.Content.ReadAsStringAsync();
                 var opcoes = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
@@ -59,7 +87,7 @@ namespace CryptoDataApi.Services
                     max = Math.Round(apenasPrecos.Max(), 2),
                     min = Math.Round(apenasPrecos.Min(), 2),
                     volatility = analiseDoCerebro?.Volatility,
-                    trend = analiseDoCerebro?.Trend,                 
+                    trend = analiseDoCerebro?.Trend,
                     percentage_change = analiseDoCerebro?.PercentageChange,
                     prices = analiseDoCerebro?.HistoricalPrices,
                 };
@@ -67,7 +95,7 @@ namespace CryptoDataApi.Services
             });
 
             return dadosFinais;
-            }
+        }
 
         // Get current price of a specific coin, with caching for 1 minute
         public async Task<decimal?> GetPriceAsync(string coin)
@@ -78,8 +106,21 @@ namespace CryptoDataApi.Services
             {
                 opcoesDoCache.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(1);
 
+                _logger.LogInformation("Cache miss for {CacheKey}. Fetching price from CoinGecko.", cacheKey);
+
                 string url = $"https://api.coingecko.com/api/v3/simple/price?ids={coin}&vs_currencies=usd";
-                var texto = await _httpClient.GetStringAsync(url);
+
+                string texto;
+                try
+                {
+                    texto = await _httpClient.GetStringAsync(url);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to fetch price from CoinGecko for coin {Coin}.", coin);
+                    throw;
+                }
+
                 var opcoes = new JsonSerializerOptions { PropertyNameCaseInsensitive= true};
 
                 // Deserialize the response to get the current price
@@ -89,6 +130,8 @@ namespace CryptoDataApi.Services
                 {
                     return dados[coin]["usd"];
                 }
+
+                _logger.LogWarning("Price not found in CoinGecko response for coin {Coin}.", coin);
                 return (decimal?)null;
             });
 
