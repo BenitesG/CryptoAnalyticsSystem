@@ -3,11 +3,30 @@ using MarketDataApi.Data;
 using Microsoft.EntityFrameworkCore;
 using MarketDataApi.Models;
 using Polly;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.AspNetCore.Mvc;
 
 // See https://aka.ms/new-console-template for more information
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddMemoryCache();
+builder.Services.AddRateLimiter(options =>
+{
+    options.AddFixedWindowLimiter("MarketPolicy", opt =>
+    {
+        opt.PermitLimit = 5; 
+        opt.Window = TimeSpan.FromSeconds(10); 
+        opt.QueueLimit = 0; 
+    });
+
+    options.OnRejected = async (context, token) =>
+    {
+        context.HttpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
+        await context.HttpContext.Response.WriteAsJsonAsync(new { 
+            error = "Too Many Requests", 
+            message = "You reached the rate limit. Please wait before making more requests." 
+        }, cancellationToken: token);
+    };
+});;
 
 // Register API DB service
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
@@ -42,6 +61,7 @@ if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
+    app.UseRateLimiter();
 }
 
 using (var scope = app.Services.CreateScope())
@@ -97,7 +117,8 @@ app.MapGet("/price/{assetType}/{symbol}", async (
         currency,
         timestamp = DateTime.UtcNow 
     });
-});
+})
+.RequireRateLimiting("MarketPolicy");
 
 app.MapGet("/price/{assetType}/{symbol}/history", async (
     string assetType, 
@@ -126,7 +147,8 @@ app.MapGet("/price/{assetType}/{symbol}/history", async (
         assetType = normalizedAssetType,
         last_7_days = history,
     });
-});
+})
+.RequireRateLimiting("MarketPolicy");
 
 app.MapGet("/logs", async (AppDbContext db) => 
 {
