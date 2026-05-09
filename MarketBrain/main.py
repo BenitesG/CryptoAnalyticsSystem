@@ -42,23 +42,24 @@ async def analyze_prices(data: PriceHistoryRequest) -> AnalyticsResponse:
 
     signal = "HOLD" 
     
-    price_to_avg_ratio = last_price / average_price
+    if np.isfinite(average_price) and average_price != 0:
+        price_to_avg_ratio = last_price / average_price
 
-    if trend == "UP":
-        if price_to_avg_ratio < 1.05: 
-            signal = "BUY"
-        else: 
-            signal = "HOLD"
-            
-    elif trend == "DOWN":
-        if price_to_avg_ratio < 0.95: 
-            signal = "STRONG BUY" if volatility < average_price * 0.05 else "HOLD" 
-        else:
-            signal = "SELL" 
-            
-    elif trend == "STABLE":
-        if volatility < average_price * 0.02: 
-            signal = "BUY"
+        if trend == "UP":
+            if price_to_avg_ratio < 1.05: 
+                signal = "BUY"
+            else: 
+                signal = "HOLD"
+                
+        elif trend == "DOWN":
+            if price_to_avg_ratio < 0.95: 
+                signal = "STRONG BUY" if volatility < average_price * 0.05 else "HOLD" 
+            else:
+                signal = "SELL" 
+                
+        elif trend == "STABLE":
+            if volatility < average_price * 0.02: 
+                signal = "BUY"
 
     return AnalyticsResponse(
         trend=trend, 
