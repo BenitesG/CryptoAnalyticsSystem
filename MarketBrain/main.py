@@ -27,7 +27,10 @@ async def analyze_prices(data: PriceHistoryRequest) -> AnalyticsResponse:
     first_price = data.prices[0]
     last_price = data.prices[-1]
 
-    change = ((last_price - first_price) / first_price) * 100
+    if first_price == 0 or not np.isfinite(first_price) or not np.isfinite(last_price):
+        change = 0.0
+    else:
+        change = ((last_price - first_price) / first_price) * 100
     
     prices_array = np.array(data.prices)
     volatility = float(np.std(prices_array))
@@ -40,11 +43,10 @@ async def analyze_prices(data: PriceHistoryRequest) -> AnalyticsResponse:
     else:
         trend = "STABLE"
 
-    signal = "HOLD" 
-    
-    if np.isfinite(average_price) and average_price != 0:
-        price_to_avg_ratio = last_price / average_price
+    signal = "HOLD"
 
+    if average_price != 0 and np.isfinite(average_price) and np.isfinite(last_price) and np.isfinite(volatility):
+        price_to_avg_ratio = last_price / average_price
         if trend == "UP":
             if price_to_avg_ratio < 1.05: 
                 signal = "BUY"

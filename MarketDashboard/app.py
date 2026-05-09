@@ -74,16 +74,17 @@ if btn_search:
                             
                             col4.metric("Volatility (Risk)", fmt.format(analysis['volatility']))
                             
-                            sinal = analysis.get('action_signal', 'HOLD')
-                            
-                            if sinal in ["BUY", "STRONG BUY"]:
-                                cor_hex = "#00FFAA" 
-                            elif sinal == "SELL":
-                                cor_hex = "#FF4B4B"
-                            else:
-                                cor_hex = "#808495"
+                            signal = str(analysis.get("action_signal", "HOLD")).upper()
 
-                            col5.markdown(f"<div><p style='font-size: 14px; margin-bottom: 0px; color: #FAFAFA;'>Action Signal</p><h2 style='color: {cor_hex}; margin-top: 0px; padding: 0px;'>{sinal}</h2></div>", unsafe_allow_html=True)
+                            if signal in ["BUY", "STRONG BUY"]:
+                                color_hex = "#00FFAA" 
+                            elif signal == "SELL":
+                                color_hex = "#FF4B4B"
+                            else:
+                                signal = "HOLD"
+                                color_hex = "#808495"
+
+                            col5.markdown(f"<div><p style='font-size: 14px; margin-bottom: 0px; color: #FAFAFA;'>Action Signal</p><h2 style='color: {color_hex}; margin-top: 0px; padding: 0px;'>{signal}</h2></div>", unsafe_allow_html=True)
 
                         # Build a temporary DataFrame for the chart
                         # We use 'Timeline' because Crypto is 168 hours, but B3 is 5 days.
