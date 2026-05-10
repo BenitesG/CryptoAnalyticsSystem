@@ -8,6 +8,11 @@ st.set_page_config(page_title="Market Analytics", layout="wide")
 st.title("📊 Market Analytics Dashboard")
 st.markdown("Welcome to the Market Analytics Dashboard! Analyze and compare price trends of Cryptocurrencies and Stocks listed on B3.")
 
+st.info("""
+**Disclaimer:** The 'Action Signal' provided by this dashboard is based on a simple mathematical algorithm (Moving Averages and Volatility) for educational purposes only. 
+**It does not constitute financial advice.** Always do your own research before investing.
+""")
+
 # User interactions
 with st.sidebar:
     st.header("Configurations")
@@ -59,7 +64,7 @@ if btn_search:
                         # --- BEAUTIFUL EXPANDABLE CARDS ---
                         # Create an expander for each asset
                         with st.expander(f"🟢 {asset.upper()} | Current Price: ${fmt.format(current_price)}", expanded=True):
-                            col1, col2, col3, col4 = st.columns(4)
+                            col1, col2, col3, col4, col5 = st.columns(5)
                             
                             col1.metric("Average Price", f"${fmt.format(analysis['average'])}")
                             col2.metric("7-Day High", f"${fmt.format(analysis['max'])}")
@@ -68,7 +73,18 @@ if btn_search:
                             col3.metric("Trend", analysis['trend'], f"{analysis['percentage_change']}%", delta_color=delta_color)
                             
                             col4.metric("Volatility (Risk)", fmt.format(analysis['volatility']))
-                        # ----------------------------------
+                            
+                            signal = str(analysis.get("action_signal", "HOLD")).upper()
+
+                            if signal in ["BUY", "STRONG BUY"]:
+                                color_hex = "#00FFAA" 
+                            elif signal == "SELL":
+                                color_hex = "#FF4B4B"
+                            else:
+                                signal = "HOLD"
+                                color_hex = "#808495"
+
+                            col5.markdown(f"<div><p style='font-size: 14px; margin-bottom: 0px; color: #FAFAFA;'>Action Signal</p><h2 style='color: {color_hex}; margin-top: 0px; padding: 0px;'>{signal}</h2></div>", unsafe_allow_html=True)
 
                         # Build a temporary DataFrame for the chart
                         # We use 'Timeline' because Crypto is 168 hours, but B3 is 5 days.

@@ -23,18 +23,18 @@ namespace MarketDataApi.Services
         {
             string cacheKey = $"hist_{coin}";
 
-            var dadosFinais = await _cache.GetOrCreateAsync(cacheKey, async (opcoesDoCache) =>
+            var finalData = await _cache.GetOrCreateAsync(cacheKey, async (cacheOptions) =>
             {
-                opcoesDoCache.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5);
+                cacheOptions.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5);
 
                 _logger.LogInformation("Cache miss for {CacheKey}. Fetching history from CoinGecko.", cacheKey);
 
                 string url = $"https://api.coingecko.com/api/v3/coins/{coin}/market_chart?vs_currency=usd&days=7";
 
-                string texto;
+                string text;
                 try
                 {
-                    texto = await _httpClient.GetStringAsync(url);
+                    text = await _httpClient.GetStringAsync(url);
                 }
                 catch (Exception ex)
                 {
@@ -42,34 +42,34 @@ namespace MarketDataApi.Services
                     throw;
                 }
 
-                var opcoesJson = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+                var optionsJson = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
 
                 // Deserialize the response to get price data
-                var dados = JsonSerializer.Deserialize<MarketChartResponse>(texto, opcoesJson);
+                var data = JsonSerializer.Deserialize<MarketChartResponse>(text, optionsJson);
 
-                if (dados?.Prices == null || dados.Prices.Count == 0)
+                if (data?.Prices == null || data.Prices.Count == 0)
                 {
                     _logger.LogWarning("No price data returned from CoinGecko for coin {Coin}.", coin);
                     return null;
                 }
 
-                var apenasPrecos = dados.Prices.Select(p => p[1]).ToList();
+                var onlyPrice = data.Prices.Select(p => p[1]).ToList();
 
-                var requestProPython = new PythonAnalyzeRequest
+                var pythonRequest = new PythonAnalyzeRequest
                 {
                     CoinName = coin,
-                    Prices = apenasPrecos
+                    Prices = onlyPrice
                 };
 
-                var conteudoJson = new StringContent(JsonSerializer.Serialize(requestProPython), System.Text.Encoding.UTF8, "application/json");
+                var jsonContent = new StringContent(JsonSerializer.Serialize(pythonRequest), System.Text.Encoding.UTF8, "application/json");
 
                 _logger.LogInformation("Calling Python analyze service for coin {Coin}.", coin);
 
-                HttpResponseMessage respostaPython;
+                HttpResponseMessage pythonResponse;
                 try
                 {
-                    respostaPython = await _httpClient.PostAsync("http://localhost:8000/analyze", conteudoJson);
-                    respostaPython.EnsureSuccessStatusCode();
+                    pythonResponse = await _httpClient.PostAsync("http://localhost:8000/analyze", jsonContent);
+                    pythonResponse.EnsureSuccessStatusCode();
                 }
                 catch (Exception ex)
                 {
@@ -77,24 +77,25 @@ namespace MarketDataApi.Services
                     throw;
                 }
 
-                var textoPython = await respostaPython.Content.ReadAsStringAsync();
-                var opcoes = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+                var pythonText = await pythonResponse.Content.ReadAsStringAsync();
+                var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
 
-                var analiseDoCerebro = JsonSerializer.Deserialize<PythonAnalyzeResponse>(textoPython, opcoes);
+                var brainAnalysis = JsonSerializer.Deserialize<PythonAnalyzeResponse>(pythonText, options);
 
                 return new {
-                    average = Math.Round(apenasPrecos.Average(), 2),
-                    max = Math.Round(apenasPrecos.Max(), 2),
-                    min = Math.Round(apenasPrecos.Min(), 2),
-                    volatility = analiseDoCerebro?.Volatility,
-                    trend = analiseDoCerebro?.Trend,
-                    percentage_change = analiseDoCerebro?.PercentageChange,
-                    prices = analiseDoCerebro?.HistoricalPrices,
+                    average = Math.Round(onlyPrice.Average(), 2),
+                    max = Math.Round(onlyPrice.Max(), 2),
+                    min = Math.Round(onlyPrice.Min(), 2),
+                    volatility = brainAnalysis?.Volatility,
+                    trend = brainAnalysis?.Trend,
+                    percentage_change = brainAnalysis?.PercentageChange,
+                    prices = brainAnalysis?.HistoricalPrices,
+                    action_signal = brainAnalysis?.ActionSignal,
                 };
 
             });
 
-            return dadosFinais;
+            return finalData;
         }
 
         // Get current price of a specific coin, with caching for 1 minute
@@ -102,18 +103,18 @@ namespace MarketDataApi.Services
         {
             string cacheKey = $"price_{coin}";
 
-            var dadosFinais = await _cache.GetOrCreateAsync(cacheKey, async (opcoesDoCache) =>
+            var finalData = await _cache.GetOrCreateAsync(cacheKey, async (cacheOptions) =>
             {
-                opcoesDoCache.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(1);
+                cacheOptions.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(1);
 
                 _logger.LogInformation("Cache miss for {CacheKey}. Fetching price from CoinGecko.", cacheKey);
 
                 string url = $"https://api.coingecko.com/api/v3/simple/price?ids={coin}&vs_currencies=usd";
 
-                string texto;
+                string text;
                 try
                 {
-                    texto = await _httpClient.GetStringAsync(url);
+                    text = await _httpClient.GetStringAsync(url);
                 }
                 catch (Exception ex)
                 {
@@ -121,21 +122,21 @@ namespace MarketDataApi.Services
                     throw;
                 }
 
-                var opcoes = new JsonSerializerOptions { PropertyNameCaseInsensitive= true};
+                var options = new JsonSerializerOptions { PropertyNameCaseInsensitive= true};
 
                 // Deserialize the response to get the current price
-                var dados = JsonSerializer.Deserialize<Dictionary<string, Dictionary<string, decimal>>>(texto, opcoes);
+                var data = JsonSerializer.Deserialize<Dictionary<string, Dictionary<string, decimal>>>(text, options);
 
-                if (dados != null && dados.ContainsKey(coin))
+                if (data != null && data.ContainsKey(coin))
                 {
-                    return dados[coin]["usd"];
+                    return data[coin]["usd"];
                 }
 
                 _logger.LogWarning("Price not found in CoinGecko response for coin {Coin}.", coin);
                 return (decimal?)null;
             });
 
-            return dadosFinais;
+            return finalData;
         }
     }
 }

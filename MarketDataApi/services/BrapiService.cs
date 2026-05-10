@@ -107,6 +107,7 @@ namespace MarketDataApi.Services
                         trend = analysisResult?.Trend,                 
                         percentage_change = analysisResult?.PercentageChange,
                         prices = analysisResult?.HistoricalPrices,
+                        action_signal = analysisResult?.ActionSignal,
                     };
                 }
                 catch (Exception ex)

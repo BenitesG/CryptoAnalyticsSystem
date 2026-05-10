@@ -35,6 +35,9 @@ namespace MarketDataApi.Models
 
         [JsonPropertyName("percentage_change")]
         public decimal PercentageChange { get; set; }
+
+        [JsonPropertyName("action_signal")]
+        public string ActionSignal { get; set; } = "HOLD";
         
         [JsonPropertyName("volatility")]
         public decimal Volatility { get; set; }
