@@ -105,6 +105,21 @@ def parse_optional_brazilian_float(value: str | None) -> float | None:
         return None
 
 
+def parse_optional_brazilian_int(value: str | None) -> int | None:
+    normalized_value = value
+    if normalized_value:
+        clean_val = re.sub(r"[^0-9,.-]", "", normalized_value)
+        if "," not in clean_val and "." in clean_val:
+            dot_groups = clean_val.split(".")
+            if all(group.isdigit() for group in dot_groups) and all(len(group) == 3 for group in dot_groups[1:]):
+                normalized_value = clean_val.replace(".", "")
+
+    parsed = parse_optional_brazilian_float(normalized_value)
+    if parsed is None or not parsed.is_integer():
+        return None
+    return int(parsed)
+
+
 def normalize_label(label: str) -> str:
     if not label:
         return ""
@@ -235,7 +250,7 @@ def get_first_raw(raw_data: dict[str, str], keys: list[str], include_dot_insensi
 @app.get("/fundamentals/{asset_type}/{ticker}")
 async def get_fundamentals(asset_type: str, ticker: str):
     if asset_type not in {"stock", "fii"}:
-        raise HTTPException(status_code=404, detail="Unsupported asset type.")
+        raise HTTPException(status_code=400, detail="Unsupported asset type.")
     category = "acoes" if asset_type == "stock" else "fundos-imobiliarios"
     url = f"https://statusinvest.com.br/{category}/{ticker.lower()}"
     headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
@@ -299,7 +314,7 @@ async def get_fundamentals(asset_type: str, ticker: str):
             liquidez_media_diaria = parse_optional_brazilian_float(get_first_raw(raw_data, ["LIQ. MÉD. DIÁRIA", "LIQUIDEZ MEDIA DIARIA", "LIQUIDEZ DIARIA"]))
             valor_patrimonial_cota = parse_optional_brazilian_float(get_first_raw(raw_data, ["VALOR PATRIM. P/COTA", "VALOR PATRIMONIAL COTA", "VP/COTA"]))
             patrimonio_liquido = parse_optional_brazilian_float(get_first_raw(raw_data, ["PATRIMÔNIO", "PATRIMONIO LIQUIDO", "PATRIMONIO"]))
-            numero_cotistas = parse_optional_brazilian_float(get_first_raw(raw_data, ["Nº DE COTISTAS", "NO DE COTISTAS", "NUMERO DE COTISTAS"]))
+            numero_cotistas = parse_optional_brazilian_int(get_first_raw(raw_data, ["Nº DE COTISTAS", "NO DE COTISTAS", "NUMERO DE COTISTAS"]))
             ultimo_rendimento = parse_optional_brazilian_float(get_first_raw(raw_data, ["ÚLTIMO RENDIMENTO", "ULTIMO RENDIMENTO"]))
             data_pagamento = get_first_raw(raw_data, ["DATA PAGAMENTO", "DATA DE PAGAMENTO"])
 
@@ -321,7 +336,7 @@ async def get_fundamentals(asset_type: str, ticker: str):
             if patrimonio_liquido is not None:
                 result["patrimonio_liquido"] = patrimonio_liquido
             if numero_cotistas is not None:
-                result["numero_cotistas"] = int(numero_cotistas)
+                result["numero_cotistas"] = numero_cotistas
             if ultimo_rendimento is not None:
                 result["ultimo_rendimento"] = ultimo_rendimento
             if data_pagamento:
@@ -368,13 +383,13 @@ async def get_fundamentals(asset_type: str, ticker: str):
                 if vacancy is not None:
                     result["vacancy"] = vacancy
                 if properties_raw:
-                    pc = parse_optional_brazilian_float(properties_raw)
+                    pc = parse_optional_brazilian_int(properties_raw)
                     if pc is not None:
-                        result["properties_count"] = int(pc)
+                        result["properties_count"] = pc
                 if tenants_raw:
-                    tn = parse_optional_brazilian_float(tenants_raw)
+                    tn = parse_optional_brazilian_int(tenants_raw)
                     if tn is not None:
-                        result["tenants_count"] = int(tn)
+                        result["tenants_count"] = tn
                 if largest_tenant is not None:
                     result["largest_tenant_pct"] = largest_tenant
                 if avg_contract_term:
