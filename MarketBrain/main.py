@@ -1,14 +1,15 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from bs4 import BeautifulSoup
 import requests
 import re
 import unicodedata
-from typing import Any
-from typing import List
+import logging
+from typing import Any, List
 import numpy as np
 
 app = FastAPI()
+logger = logging.getLogger(__name__)
 
 # C# Response model:
 class PriceHistoryRequest(BaseModel):
@@ -102,13 +103,6 @@ def parse_optional_brazilian_float(value: str | None) -> float | None:
         return float(clean_val.strip())
     except ValueError:
         return None
-
-
-def safe_int(value: str) -> int:
-    try:
-        return int(parse_brazilian_float(value))
-    except Exception:
-        return 0
 
 
 def normalize_label(label: str) -> str:
@@ -216,49 +210,47 @@ def find_regex_group(text: str, patterns: list[str]) -> str | None:
                 return value
     return None
 
-# NOTE: helper imports and the `parse_brazilian_float` function above remain unchanged.
+def get_first_raw(raw_data: dict[str, str], keys: list[str], include_dot_insensitive: bool = False) -> str | None:
+    normalized_keys = [normalize_label(k) for k in keys]
 
-class StockFundamentals(BaseModel):
-    ticker: str
-    p_l: float
-    p_vp: float
-    dy: float
-    roe: float
-    debt_ebitda: float
-    cagr_5y: float
-    net_margin: float
+    for normalized_key in normalized_keys:
+        value = raw_data.get(normalized_key)
+        if value and not is_missing_value(value):
+            return value
 
-class BrickFiiFundamentals(BaseModel):
-    ticker: str
-    p_vp: float
-    dy: float
-    vacancy: float
-    properties_count: int
-    segment: str
+    for existing_key, existing_value in raw_data.items():
+        if is_missing_value(existing_value):
+            continue
+        if any(normalized_key in existing_key for normalized_key in normalized_keys):
+            return existing_value
 
-class PaperFiiFundamentals(BaseModel):
-    ticker: str
-    p_vp: float
-    dy: float
-    cash_available: float
-    segment: str
+    if include_dot_insensitive:
+        for existing_key, existing_value in raw_data.items():
+            if is_missing_value(existing_value):
+                continue
+            if any(normalized_key.replace(".", "") in existing_key.replace(".", "") for normalized_key in normalized_keys):
+                return existing_value
+    return None
 
-class ErrorResponse(BaseModel):
-    error: str
-
-@app.get(
-    "/fundamentals/{asset_type}/{ticker}",
-    response_model=StockFundamentals | BrickFiiFundamentals | PaperFiiFundamentals | ErrorResponse,
-)
-async def get_fundamentals(
-    asset_type: str, ticker: str
-) -> StockFundamentals | BrickFiiFundamentals | PaperFiiFundamentals | ErrorResponse:
+@app.get("/fundamentals/{asset_type}/{ticker}")
+async def get_fundamentals(asset_type: str, ticker: str):
+    if asset_type not in {"stock", "fii"}:
+        raise HTTPException(status_code=404, detail="Unsupported asset type.")
     category = "acoes" if asset_type == "stock" else "fundos-imobiliarios"
     url = f"https://statusinvest.com.br/{category}/{ticker.lower()}"
     headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
 
     try:
         response = requests.get(url, headers=headers, timeout=15)
+        response.raise_for_status()
+    except requests.Timeout as error:
+        logger.warning("Timed out fetching fundamentals for %s/%s: %s", asset_type, ticker, error)
+        raise HTTPException(status_code=504, detail="Upstream provider request timed out.") from error
+    except requests.RequestException as error:
+        logger.warning("Failed upstream request for %s/%s: %s", asset_type, ticker, error)
+        raise HTTPException(status_code=502, detail="Failed to fetch fundamentals from upstream provider.") from error
+
+    try:
         html = response.content.decode("utf-8", errors="replace")
         soup = BeautifulSoup(html, "lxml")
         page_text = soup.get_text(" ", strip=True)
@@ -266,26 +258,6 @@ async def get_fundamentals(
 
         # 2. TARGETED MAPPING
         if asset_type == "stock":
-            def get_first_raw(keys: list[str]) -> str | None:
-                for k in keys:
-                    v = raw_data.get(normalize_label(k))
-                    if v and not is_missing_value(v):
-                        return v
-
-                # Fallback by partial key match for noisy labels
-                for existing_key, existing_value in raw_data.items():
-                    if is_missing_value(existing_value):
-                        continue
-                    if any(normalize_label(k) in existing_key for k in keys):
-                        return existing_value
-
-                for existing_key, existing_value in raw_data.items():
-                    if is_missing_value(existing_value):
-                        continue
-                    if any(normalize_label(k).replace(".", "") in existing_key.replace(".", "") for k in keys):
-                        return existing_value
-                return None
-
             result: dict[str, Any] = {"ticker": ticker.upper()}
 
             stock_metrics = {
@@ -299,11 +271,11 @@ async def get_fundamentals(
             }
 
             for key, aliases in stock_metrics.items():
-                value = parse_optional_brazilian_float(get_first_raw(aliases))
+                value = parse_optional_brazilian_float(get_first_raw(raw_data, aliases, include_dot_insensitive=True))
                 if value is not None:
                     result[key] = value
 
-            sector = get_first_raw(["SETOR"])
+            sector = get_first_raw(raw_data, ["SETOR"])
             if sector:
                 result["sector"] = sector
 
@@ -318,31 +290,18 @@ async def get_fundamentals(
                 or not is_paper_by_segment
             )
 
-            def get_first_raw(keys: list[str]) -> str | None:
-                for k in keys:
-                    v = raw_data.get(normalize_label(k))
-                    if v and not is_missing_value(v):
-                        return v
-
-                for existing_key, existing_value in raw_data.items():
-                    if is_missing_value(existing_value):
-                        continue
-                    if any(normalize_label(k) in existing_key for k in keys):
-                        return existing_value
-                return None
-
             result: dict[str, Any] = {"ticker": ticker.upper()}
-            pvp = parse_optional_brazilian_float(get_first_raw(["P/VP", "P/VP (MRQ)"]))
-            dy = parse_optional_brazilian_float(get_first_raw(["D.Y", "YIELD", "DIVIDEND YIELD"]))
-            segment = get_first_raw(["SEGMENTO", "SETOR"])
+            pvp = parse_optional_brazilian_float(get_first_raw(raw_data, ["P/VP", "P/VP (MRQ)"]))
+            dy = parse_optional_brazilian_float(get_first_raw(raw_data, ["D.Y", "YIELD", "DIVIDEND YIELD"]))
+            segment = get_first_raw(raw_data, ["SEGMENTO", "SETOR"])
 
             # First-wave high-value FII fields.
-            liquidez_media_diaria = parse_optional_brazilian_float(get_first_raw(["LIQ. MÉD. DIÁRIA", "LIQUIDEZ MEDIA DIARIA", "LIQUIDEZ DIARIA"]))
-            valor_patrimonial_cota = parse_optional_brazilian_float(get_first_raw(["VALOR PATRIM. P/COTA", "VALOR PATRIMONIAL COTA", "VP/COTA"]))
-            patrimonio_liquido = parse_optional_brazilian_float(get_first_raw(["PATRIMÔNIO", "PATRIMONIO LIQUIDO", "PATRIMONIO"]))
-            numero_cotistas = parse_optional_brazilian_float(get_first_raw(["Nº DE COTISTAS", "NO DE COTISTAS", "NUMERO DE COTISTAS"]))
-            ultimo_rendimento = parse_optional_brazilian_float(get_first_raw(["ÚLTIMO RENDIMENTO", "ULTIMO RENDIMENTO"]))
-            data_pagamento = get_first_raw(["DATA PAGAMENTO", "DATA DE PAGAMENTO"])
+            liquidez_media_diaria = parse_optional_brazilian_float(get_first_raw(raw_data, ["LIQ. MÉD. DIÁRIA", "LIQUIDEZ MEDIA DIARIA", "LIQUIDEZ DIARIA"]))
+            valor_patrimonial_cota = parse_optional_brazilian_float(get_first_raw(raw_data, ["VALOR PATRIM. P/COTA", "VALOR PATRIMONIAL COTA", "VP/COTA"]))
+            patrimonio_liquido = parse_optional_brazilian_float(get_first_raw(raw_data, ["PATRIMÔNIO", "PATRIMONIO LIQUIDO", "PATRIMONIO"]))
+            numero_cotistas = parse_optional_brazilian_float(get_first_raw(raw_data, ["Nº DE COTISTAS", "NO DE COTISTAS", "NUMERO DE COTISTAS"]))
+            ultimo_rendimento = parse_optional_brazilian_float(get_first_raw(raw_data, ["ÚLTIMO RENDIMENTO", "ULTIMO RENDIMENTO"]))
+            data_pagamento = get_first_raw(raw_data, ["DATA PAGAMENTO", "DATA DE PAGAMENTO"])
 
             if pvp is not None:
                 result["p_vp"] = pvp
@@ -355,44 +314,44 @@ async def get_fundamentals(
             if tipo_fii:
                 result["tipo_fii"] = tipo_fii
 
-            if liquidez_media_diaria is not None and liquidez_media_diaria != 0.0:
+            if liquidez_media_diaria is not None:
                 result["liquidez_media_diaria"] = liquidez_media_diaria
-            if valor_patrimonial_cota is not None and valor_patrimonial_cota != 0.0:
+            if valor_patrimonial_cota is not None:
                 result["valor_patrimonial_cota"] = valor_patrimonial_cota
-            if patrimonio_liquido is not None and patrimonio_liquido != 0.0:
+            if patrimonio_liquido is not None:
                 result["patrimonio_liquido"] = patrimonio_liquido
-            if numero_cotistas is not None and int(numero_cotistas) != 0:
+            if numero_cotistas is not None:
                 result["numero_cotistas"] = int(numero_cotistas)
-            if ultimo_rendimento is not None and ultimo_rendimento != 0.0:
+            if ultimo_rendimento is not None:
                 result["ultimo_rendimento"] = ultimo_rendimento
             if data_pagamento:
                 result["data_pagamento"] = data_pagamento
 
             if is_brick:
-                vacancy_raw = get_first_raw(["VACÂNCIA FÍSICA", "VACÂNCIA"]) or find_regex_group(
+                vacancy_raw = get_first_raw(raw_data, ["VACÂNCIA FÍSICA", "VACÂNCIA"]) or find_regex_group(
                     page_text,
                     [
                         r"VAC[ÂA]NCIA(?:\s+F[ÍI]SICA)?\s*([0-9.,]+%?)",
                         r"VACANCY\s*([0-9.,]+%?)"
                     ]
                 )
-                properties_raw = get_first_raw(["Nº DE IMÓVEIS", "NÚMERO DE IMÓVEIS", "Nº IMÓVEIS"]) or find_regex_group(
+                properties_raw = get_first_raw(raw_data, ["Nº DE IMÓVEIS", "NÚMERO DE IMÓVEIS", "Nº IMÓVEIS"]) or find_regex_group(
                     page_text,
                     [r"N[ºO°]?\s*DE\s*IM[ÓO]VEIS\s*([0-9.,]+)"]
                 )
-                tenants_raw = get_first_raw(["Nº DE INQUILINOS", "NUMERO DE INQUILINOS", "N INQUILINOS"]) or find_regex_group(
+                tenants_raw = get_first_raw(raw_data, ["Nº DE INQUILINOS", "NUMERO DE INQUILINOS", "N INQUILINOS"]) or find_regex_group(
                     page_text,
                     [r"N[ºO°]?\s*DE\s*INQUILINOS\s*([0-9.,]+)"]
                 )
-                largest_tenant_raw = get_first_raw(["MAIOR INQUILINO (%)", "MAIOR INQUILINO"]) or find_regex_group(
+                largest_tenant_raw = get_first_raw(raw_data, ["MAIOR INQUILINO (%)", "MAIOR INQUILINO"]) or find_regex_group(
                     page_text,
                     [r"MAIOR\s+INQUILINO(?:\s*\(%\))?\s*([0-9.,]+%?)"]
                 )
-                avg_contract_term = get_first_raw(["PRAZO MÉDIO DOS CONTRATOS", "PRAZO MÉDIO"]) or find_regex_group(
+                avg_contract_term = get_first_raw(raw_data, ["PRAZO MÉDIO DOS CONTRATOS", "PRAZO MÉDIO"]) or find_regex_group(
                     page_text,
                     [r"PRAZO\s+M[ÉE]DIO(?:\s+DOS\s+CONTRATOS)?\s*([0-9.,]+\s*(?:ANOS?|MESES?))"]
                 )
-                contract_type = get_first_raw(["TIPO DE CONTRATO", "TIPO CONTRATO"]) or find_regex_group(
+                contract_type = get_first_raw(raw_data, ["TIPO DE CONTRATO", "TIPO CONTRATO"]) or find_regex_group(
                     page_text,
                     [r"TIPO\s+DE\s+CONTRATO\s*(T[ÍI]PICO|AT[ÍI]PICO|MISTO)"]
                 )
@@ -400,35 +359,35 @@ async def get_fundamentals(
                 vacancy = parse_optional_brazilian_float(vacancy_raw)
                 largest_tenant = parse_optional_brazilian_float(largest_tenant_raw)
 
-                inadimplencia_raw = get_first_raw(["INADIMPLÊNCIA", "INADIMPLENCIA"]) or find_regex_group(
+                inadimplencia_raw = get_first_raw(raw_data, ["INADIMPLÊNCIA", "INADIMPLENCIA"]) or find_regex_group(
                     page_text,
                     [r"INADIMPL[ÊE]NCIA\s*([0-9.,]+%?)"]
                 )
                 inadimplencia = parse_optional_brazilian_float(inadimplencia_raw)
 
-                if vacancy is not None and vacancy != 0.0:
+                if vacancy is not None:
                     result["vacancy"] = vacancy
                 if properties_raw:
-                    pc = safe_int(properties_raw)
-                    if pc != 0:
-                        result["properties_count"] = pc
+                    pc = parse_optional_brazilian_float(properties_raw)
+                    if pc is not None:
+                        result["properties_count"] = int(pc)
                 if tenants_raw:
-                    tn = safe_int(tenants_raw)
-                    if tn != 0:
-                        result["tenants_count"] = tn
-                if largest_tenant is not None and largest_tenant != 0.0:
+                    tn = parse_optional_brazilian_float(tenants_raw)
+                    if tn is not None:
+                        result["tenants_count"] = int(tn)
+                if largest_tenant is not None:
                     result["largest_tenant_pct"] = largest_tenant
                 if avg_contract_term:
                     result["avg_contract_term"] = avg_contract_term
                 if contract_type:
                     result["contract_type"] = contract_type
-                if inadimplencia is not None and inadimplencia != 0.0:
+                if inadimplencia is not None:
                     result["inadimplencia"] = inadimplencia
 
                 return result
             else:
-                cash_available = parse_optional_brazilian_float(get_first_raw(["VALOR EM CAIXA", "CAIXA"]))
-                cdi_ipca = get_first_raw(["% CDI/IPCA", "CDI/IPCA", "CDI", "IPCA"]) or find_regex_group(
+                cash_available = parse_optional_brazilian_float(get_first_raw(raw_data, ["VALOR EM CAIXA", "CAIXA"]))
+                cdi_ipca = get_first_raw(raw_data, ["% CDI/IPCA", "CDI/IPCA", "CDI", "IPCA"]) or find_regex_group(
                     page_text,
                     [
                         r"CDI\s*/\s*IPCA\s*([0-9.,]+%?)",
@@ -436,19 +395,19 @@ async def get_fundamentals(
                         r"CDI\s*\+\s*([0-9.,]+%?)"
                     ]
                 )
-                inadimplencia_raw = get_first_raw(["INADIMPLÊNCIA", "INADIMPLENCIA"]) or find_regex_group(
+                inadimplencia_raw = get_first_raw(raw_data, ["INADIMPLÊNCIA", "INADIMPLENCIA"]) or find_regex_group(
                     page_text,
                     [r"INADIMPL[ÊE]NCIA\s*([0-9.,]+%?)"]
                 )
                 inadimplencia = parse_optional_brazilian_float(inadimplencia_raw)
-                cri_ratings = get_first_raw(["RATING DOS CRIS", "RATING", "RATING CRI", "RATING CRIS"]) or find_regex_group(
+                cri_ratings = get_first_raw(raw_data, ["RATING DOS CRIS", "RATING", "RATING CRI", "RATING CRIS"]) or find_regex_group(
                     page_text,
                     [
                         r"RATING(?:\s+DOS\s+CRIS?)?\s*([A-Z]{1,3}[+\-]?)",
                         r"CRI\s+RATING\s*([A-Z]{1,3}[+\-]?)"
                     ]
                 )
-                dividend_payout_raw = get_first_raw(["PAYOUT", "DIVIDEND PAYOUT"]) or find_regex_group(
+                dividend_payout_raw = get_first_raw(raw_data, ["PAYOUT", "DIVIDEND PAYOUT"]) or find_regex_group(
                     page_text,
                     [r"PAYOUT\s*([0-9.,]+%?)"]
                 )
@@ -456,16 +415,17 @@ async def get_fundamentals(
 
                 if cdi_ipca:
                     result["%_cdi_ipca"] = cdi_ipca
-                if inadimplencia is not None and inadimplencia != 0.0:
+                if inadimplencia is not None:
                     result["inadimplencia"] = inadimplencia
                 if cri_ratings:
                     result["cri_ratings"] = cri_ratings
-                if cash_available is not None and cash_available != 0.0:
+                if cash_available is not None:
                     result["cash_available"] = cash_available
-                if dividend_payout is not None and dividend_payout != 0.0:
+                if dividend_payout is not None:
                     result["dividend_payout"] = dividend_payout
 
                 return result
 
-    except Exception as e:
-        return {"error": f"Internal Scraper Error: {str(e)}"}
+    except Exception:
+        logger.exception("Internal scraper error while parsing fundamentals for %s/%s", asset_type, ticker)
+        raise HTTPException(status_code=500, detail="Internal scraper error.")
