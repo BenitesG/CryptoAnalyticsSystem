@@ -241,10 +241,18 @@ class PaperFiiFundamentals(BaseModel):
     p_vp: float
     dy: float
     cash_available: float
-    segment: str 
+    segment: str
 
-@app.get("/fundamentals/{asset_type}/{ticker}")
-async def get_fundamentals(asset_type: str, ticker: str):
+class ErrorResponse(BaseModel):
+    error: str
+
+@app.get(
+    "/fundamentals/{asset_type}/{ticker}",
+    response_model=StockFundamentals | BrickFiiFundamentals | PaperFiiFundamentals | ErrorResponse,
+)
+async def get_fundamentals(
+    asset_type: str, ticker: str
+) -> StockFundamentals | BrickFiiFundamentals | PaperFiiFundamentals | ErrorResponse:
     category = "acoes" if asset_type == "stock" else "fundos-imobiliarios"
     url = f"https://statusinvest.com.br/{category}/{ticker.lower()}"
     headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
