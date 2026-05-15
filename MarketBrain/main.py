@@ -441,6 +441,8 @@ async def get_fundamentals(asset_type: str, ticker: str):
 
                 return result
 
+    except HTTPException:
+        raise
     except Exception:
         logger.exception("Internal scraper error while parsing fundamentals for %s/%s", asset_type, ticker)
         raise HTTPException(status_code=500, detail="Internal scraper error.")
