@@ -250,7 +250,7 @@ def get_first_raw(raw_data: dict[str, str], keys: list[str], include_dot_insensi
 
 
 def ensure_fundamentals_found(result: dict[str, Any]) -> None:
-    if not any(key != "ticker" for key in result):
+    if set(result.keys()) == {"ticker"}:
         logger.debug("No recognizable fundamentals extracted for ticker %s", result.get("ticker", ""))
         raise HTTPException(status_code=404, detail="Fundamentals not found for ticker.")
 
