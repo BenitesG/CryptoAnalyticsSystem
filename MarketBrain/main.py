@@ -1,3 +1,4 @@
+import asyncio
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from bs4 import BeautifulSoup
@@ -247,6 +248,11 @@ def get_first_raw(raw_data: dict[str, str], keys: list[str], include_dot_insensi
                 return existing_value
     return None
 
+
+def ensure_fundamentals_found(result: dict[str, Any]) -> None:
+    if len(result) == 1 and "ticker" in result:
+        raise HTTPException(status_code=404, detail="Fundamentals not found for ticker.")
+
 @app.get("/fundamentals/{asset_type}/{ticker}")
 async def get_fundamentals(asset_type: str, ticker: str):
     if asset_type not in {"stock", "fii"}:
@@ -256,7 +262,7 @@ async def get_fundamentals(asset_type: str, ticker: str):
     headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
 
     try:
-        response = requests.get(url, headers=headers, timeout=15)
+        response = await asyncio.to_thread(requests.get, url, headers=headers, timeout=15)
         response.raise_for_status()
     except requests.Timeout as error:
         logger.warning("Timed out fetching fundamentals for %s/%s: %s", asset_type, ticker, error)
@@ -294,6 +300,7 @@ async def get_fundamentals(asset_type: str, ticker: str):
             if sector:
                 result["sector"] = sector
 
+            ensure_fundamentals_found(result)
             return result
 
         elif asset_type == "fii":
@@ -399,6 +406,7 @@ async def get_fundamentals(asset_type: str, ticker: str):
                 if inadimplencia is not None:
                     result["inadimplencia"] = inadimplencia
 
+                ensure_fundamentals_found(result)
                 return result
             else:
                 cash_available = parse_optional_brazilian_float(get_first_raw(raw_data, ["VALOR EM CAIXA", "CAIXA"]))
@@ -439,6 +447,7 @@ async def get_fundamentals(asset_type: str, ticker: str):
                 if dividend_payout is not None:
                     result["dividend_payout"] = dividend_payout
 
+                ensure_fundamentals_found(result)
                 return result
 
     except HTTPException:
