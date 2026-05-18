@@ -89,33 +89,34 @@ dotnet run
 ```
 
 ### 5. Test the Endpoints
-Open your browser or access the built-in Swagger UI: 
+- Open your browser or access the built-in Swagger UI: 
 ```bash
 http://localhost:<YOUR_PORT>/swagger
 ```
 
-Crypto Analysis: 
+- Crypto Analysis: 
 ```bash
 http://localhost:<YOUR_PORT>/price/crypto/bitcoin/history
 ```
 
-B3 Stock Analysis: 
+- B3 Stock Analysis: 
 ```bash
 http://localhost:<YOUR_PORT>/price/stock/petr4/history
 ```
 
-B3 Fundamentals Data:
+- B3 Fundamentals Data:
 ```bash
 http://localhost:<YOUR_PORT>/fundamentals/stock/petr4
 ```
 
-Audit Logs: (Retrieves the last 10 search records).
+- Audit Logs:
 ```bash
 http://localhost:<YOUR_PORT>/logs
 ```
+(Retrieves the last 10 search records).
 
 > 🌴 Developed as a robust portfolio project to demonstrate backend engineering, microservices integration, web scraping, and polyglot architecture.
 
 ### 📜 License
 
-This project is distributed under the MIT License. See the LICENSE file for more information.
+This project is distributed under the MIT License. See the [LICENSE](LICENSE) file for more information.
