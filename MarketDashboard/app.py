@@ -11,35 +11,55 @@ API_CSHARP_URL = "http://localhost:5091"
 API_BRAIN_URL = "http://localhost:8000" 
 
 # --- FUNÇÕES DE FUNDAMENTOS ---
+class FundamentalsFetchError(RuntimeError):
+    def __init__(self, message: str, status_code: int | None = None):
+        super().__init__(message)
+        self.status_code = status_code
+
 @st.cache_data(ttl=300) # Cache de 5 min para evitar bater no scraper atoa
+def _fetch_fundamentals_cached(asset_type: str, ticker: str):
+    response = requests.get(f"{API_BRAIN_URL}/fundamentals/{asset_type}/{ticker}", timeout=15)
+    response.raise_for_status()
+    return response.json()
+
 def fetch_fundamentals(asset_type: str, ticker: str):
     """Busca fundamentos no MarketBrain (FastAPI)."""
     try:
-        response = requests.get(f"{API_BRAIN_URL}/fundamentals/{asset_type}/{ticker}", timeout=15)
-        if response.status_code == 200:
-            return response.status_code, response.json()
-        return response.status_code, None
-    except Exception as e:
-        pass # Falhas de conexão serão tratadas pela UI silenciosamente
-    return None, None
+        data = _fetch_fundamentals_cached(asset_type, ticker)
+        return 200, data
+    except requests.HTTPError as exc:
+        status_code = exc.response.status_code if exc.response else None
+        if status_code == 404:
+            return status_code, None
+        raise FundamentalsFetchError(
+            "⚠️ Serviço de fundamentos indisponível no momento.",
+            status_code=status_code
+        ) from exc
+    except requests.RequestException as exc:
+        raise FundamentalsFetchError(
+            "⚠️ Erro de conexão com o serviço de fundamentos.",
+        ) from exc
 
 def fetch_fundamentals_with_fallback(ticker: str):
     """Heurística: Tenta FII se terminar em 11, senão Ação. Faz fallback se der 404."""
-    if ticker.endswith("11"):
-        status_code, data = fetch_fundamentals("fii", ticker)
-        if data:
-            return "fii", data, None
-        if status_code == 404:
-            # Fallback para Ação (Units como TAEE11, SANB11)
-            fallback_status, data = fetch_fundamentals("stock", ticker)
+    try:
+        if ticker.endswith("11"):
+            status_code, data = fetch_fundamentals("fii", ticker)
             if data:
-                return "stock", data, None
-            return None, None, fallback_status
+                return "fii", data, None
+            if status_code == 404:
+                # Fallback para Ação (Units como TAEE11, SANB11)
+                fallback_status, data = fetch_fundamentals("stock", ticker)
+                if data:
+                    return "stock", data, None
+                return None, None, fallback_status
+            return None, None, status_code
+        status_code, data = fetch_fundamentals("stock", ticker)
+        if data:
+            return "stock", data, None
         return None, None, status_code
-    status_code, data = fetch_fundamentals("stock", ticker)
-    if data:
-        return "stock", data, None
-    return None, None, status_code
+    except FundamentalsFetchError as exc:
+        return None, None, exc.status_code
 
 
 def _labelize_key(key: str) -> str:
