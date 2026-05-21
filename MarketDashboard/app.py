@@ -27,15 +27,19 @@ def fetch_fundamentals_with_fallback(ticker: str):
     """Heurística: Tenta FII se terminar em 11, senão Ação. Faz fallback se der 404."""
     if ticker.endswith("11"):
         status_code, data = fetch_fundamentals("fii", ticker)
-        if data: return "fii", data
+        if data:
+            return "fii", data, None
         if status_code == 404:
             # Fallback para Ação (Units como TAEE11, SANB11)
-            _, data = fetch_fundamentals("stock", ticker)
-            if data: return "stock", data
-    else:
-        _, data = fetch_fundamentals("stock", ticker)
-        if data: return "stock", data
-    return None, None
+            fallback_status, data = fetch_fundamentals("stock", ticker)
+            if data:
+                return "stock", data, None
+            return None, None, fallback_status
+        return None, None, status_code
+    status_code, data = fetch_fundamentals("stock", ticker)
+    if data:
+        return "stock", data, None
+    return None, None, status_code
 
 def _format_metric(label: str, value, is_percentage: bool = False, currency: str = None):
     """Helper to format and render only non-empty metrics."""
@@ -309,11 +313,13 @@ if btn_search:
                             # 2. LINHA DE FUNDAMENTOS (Python API - Apenas B3)
                             if market_type == "Stocks/REITs (B3)":
                                 st.divider()
-                                a_type, fund_data = fetch_fundamentals_with_fallback(asset)
+                                a_type, fund_data, fund_status = fetch_fundamentals_with_fallback(asset)
                                 if fund_data and a_type:
                                     render_fundamentals_ui(a_type, fund_data)
-                                else:
+                                elif fund_status == 404:
                                     st.warning("⚠️ Dados fundamentalistas não encontrados para este ativo.")
+                                else:
+                                    st.error("⚠️ Serviço de fundamentos indisponível no momento. Tente novamente mais tarde.")
 
                         # Prepara DF para o Gráfico
                         df_temp = pd.DataFrame({
