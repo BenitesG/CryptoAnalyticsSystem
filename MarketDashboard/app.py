@@ -17,21 +17,23 @@ def fetch_fundamentals(asset_type: str, ticker: str):
     try:
         response = requests.get(f"{API_BRAIN_URL}/fundamentals/{asset_type}/{ticker}", timeout=15)
         if response.status_code == 200:
-            return response.json()
+            return response.status_code, response.json()
+        return response.status_code, None
     except Exception as e:
         pass # Falhas de conexão serão tratadas pela UI silenciosamente
-    return None
+    return None, None
 
 def fetch_fundamentals_with_fallback(ticker: str):
     """Heurística: Tenta FII se terminar em 11, senão Ação. Faz fallback se der 404."""
     if ticker.endswith("11"):
-        data = fetch_fundamentals("fii", ticker)
+        status_code, data = fetch_fundamentals("fii", ticker)
         if data: return "fii", data
-        # Fallback para Ação (Units como TAEE11, SANB11)
-        data = fetch_fundamentals("stock", ticker)
-        if data: return "stock", data
+        if status_code == 404:
+            # Fallback para Ação (Units como TAEE11, SANB11)
+            _, data = fetch_fundamentals("stock", ticker)
+            if data: return "stock", data
     else:
-        data = fetch_fundamentals("stock", ticker)
+        _, data = fetch_fundamentals("stock", ticker)
         if data: return "stock", data
     return None, None
 
