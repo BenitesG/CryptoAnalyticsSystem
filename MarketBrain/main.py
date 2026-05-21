@@ -163,11 +163,17 @@ def is_valid_quality_text(value: str | None) -> bool:
     if not value:
         return False
     v = value.strip()
-    if len(v) < 3:
-        return False
     if v.lower() in {"de", "do", "da", "dos", "das"}:
         return False
-    return True
+    if len(v) >= 3:
+        return True
+    if len(v) == 2 and v.upper() in {
+        "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA",
+        "MT", "MS", "MG", "PA", "PB", "PR", "PE", "PI", "RJ", "RN",
+        "RS", "RO", "RR", "SC", "SP", "SE", "TO",
+    }:
+        return True
+    return False
 
 
 def extract_kv_from_soup(soup: BeautifulSoup) -> dict[str, str]:
