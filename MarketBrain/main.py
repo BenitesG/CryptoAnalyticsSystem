@@ -150,6 +150,32 @@ def is_missing_value(value: str) -> bool:
     return stripped in {"-", "--", "N/A", "NA", "null", "None"}
 
 
+def is_valid_rating(value: str | None) -> bool:
+    if not value:
+        return False
+    v = value.strip().upper()
+    if v in {"DE", "DO", "DA", "DOS", "DAS"}:
+        return False
+    return re.fullmatch(r"[A-Z]{1,3}[+\-]?", v) is not None
+
+
+def is_valid_quality_text(value: str | None) -> bool:
+    if not value:
+        return False
+    v = value.strip()
+    if v.lower() in {"de", "do", "da", "dos", "das"}:
+        return False
+    if len(v) >= 3:
+        return True
+    if len(v) == 2 and v.upper() in {
+        "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA",
+        "MT", "MS", "MG", "PA", "PB", "PR", "PE", "PI", "RJ", "RN",
+        "RS", "RO", "RR", "SC", "SP", "SE", "TO",
+    }:
+        return True
+    return False
+
+
 def extract_kv_from_soup(soup: BeautifulSoup) -> dict[str, str]:
     data: dict[str, str] = {}
 
@@ -319,6 +345,10 @@ async def get_fundamentals(asset_type: str, ticker: str):
             dy = parse_optional_brazilian_float(get_first_raw(raw_data, ["D.Y", "YIELD", "DIVIDEND YIELD"]))
             segment = get_first_raw(raw_data, ["SEGMENTO", "SETOR"])
 
+            localizacao = get_first_raw(raw_data, ["LOCALIZAÇÃO", "LOCALIZACAO", "LOCALIZAÇÃO DOS IMÓVEIS", "LOCALIZACAO DOS IMOVEIS"])
+            qualidade_imoveis = get_first_raw(raw_data, ["QUALIDADE DOS IMÓVEIS", "QUALIDADE DOS IMOVEIS", "QUALIDADE DO IMÓVEL", "QUALIDADE DO IMOVEL", "PADRÃO DOS IMÓVEIS", "PADRAO DOS IMOVEIS"])
+            qualidade_cris = get_first_raw(raw_data, ["QUALIDADE DOS CRIS", "QUALIDADE CRI", "QUALIDADE DOS CRI"])
+
             # First-wave high-value FII fields.
             liquidez_media_diaria = parse_optional_brazilian_float(get_first_raw(raw_data, ["LIQ. MÉD. DIÁRIA", "LIQUIDEZ MEDIA DIARIA", "LIQUIDEZ DIARIA"]))
             valor_patrimonial_cota = parse_optional_brazilian_float(get_first_raw(raw_data, ["VALOR PATRIM. P/COTA", "VALOR PATRIMONIAL COTA", "VP/COTA"]))
@@ -350,9 +380,15 @@ async def get_fundamentals(asset_type: str, ticker: str):
                 result["ultimo_rendimento"] = ultimo_rendimento
             if data_pagamento:
                 result["data_pagamento"] = data_pagamento
+            if is_valid_quality_text(localizacao):
+                result["localizacao"] = localizacao
+            if is_valid_quality_text(qualidade_imoveis):
+                result["qualidade_imoveis"] = qualidade_imoveis
+            if is_valid_quality_text(qualidade_cris):
+                result["qualidade_cris"] = qualidade_cris
 
             if is_brick:
-                vacancy_raw = get_first_raw(raw_data, ["VACÂNCIA FÍSICA", "VACÂNCIA"]) or find_regex_group(
+                vacancy_raw = get_first_raw(raw_data, ["VACÂNCIA FÍSICA", "VACÂNCIA FINANCEIRA", "VACÂNCIA"]) or find_regex_group(
                     page_text,
                     [
                         r"VAC[ÂA]NCIA(?:\s+F[ÍI]SICA)?\s*([0-9.,]+%?)",
@@ -385,7 +421,10 @@ async def get_fundamentals(asset_type: str, ticker: str):
 
                 inadimplencia_raw = get_first_raw(raw_data, ["INADIMPLÊNCIA", "INADIMPLENCIA"]) or find_regex_group(
                     page_text,
-                    [r"INADIMPL[ÊE]NCIA\s*([0-9.,]+%?)"]
+                    [
+                        r"INADIMPL[ÊE]NCIA(?:\s+(?:DE\s+)?ALUGUEL)?\s*([0-9.,]+%?)",
+                        r"DEFAULT\s*([0-9.,]+%?)"
+                    ]
                 )
                 inadimplencia = parse_optional_brazilian_float(inadimplencia_raw)
 
@@ -411,42 +450,53 @@ async def get_fundamentals(asset_type: str, ticker: str):
                 ensure_fundamentals_found(result)
                 return result
             else:
-                cash_available = parse_optional_brazilian_float(get_first_raw(raw_data, ["VALOR EM CAIXA", "CAIXA"]))
-                cdi_ipca = get_first_raw(raw_data, ["% CDI/IPCA", "CDI/IPCA", "CDI", "IPCA"]) or find_regex_group(
+                cash_available = parse_optional_brazilian_float(get_first_raw(raw_data, ["VALOR EM CAIXA", "CAIXA", "DISPONIBILIDADE"])) or parse_optional_brazilian_float(find_regex_group(
+                    page_text,
+                    [r"(?:VALOR\s+)?EM\s+CAIXA\s*(?:R\$)?\s*([0-9.,]+)", r"CAIXA\s+([0-9.,]+)"]
+                ))
+                cdi_ipca = get_first_raw(raw_data, ["% CDI/IPCA", "CDI/IPCA", "CDI", "IPCA", "INDEXADOR"]) or find_regex_group(
                     page_text,
                     [
                         r"CDI\s*/\s*IPCA\s*([0-9.,]+%?)",
                         r"IPCA\s*\+\s*([0-9.,]+%?)",
-                        r"CDI\s*\+\s*([0-9.,]+%?)"
+                        r"CDI\s*\+\s*([0-9.,]+%?)",
+                        r"(?:% DO )CDI\s*([0-9.,]+%?)"
                     ]
                 )
                 inadimplencia_raw = get_first_raw(raw_data, ["INADIMPLÊNCIA", "INADIMPLENCIA"]) or find_regex_group(
                     page_text,
-                    [r"INADIMPL[ÊE]NCIA\s*([0-9.,]+%?)"]
+                    [
+                        r"INADIMPL[ÊE]NCIA\s*([0-9.,]+%?)",
+                        r"DEFAULT\s*([0-9.,]+%?)"
+                    ]
                 )
                 inadimplencia = parse_optional_brazilian_float(inadimplencia_raw)
                 cri_ratings = get_first_raw(raw_data, ["RATING DOS CRIS", "RATING", "RATING CRI", "RATING CRIS"]) or find_regex_group(
                     page_text,
                     [
-                        r"RATING(?:\s+DOS\s+CRIS?)?\s*([A-Z]{1,3}[+\-]?)",
-                        r"CRI\s+RATING\s*([A-Z]{1,3}[+\-]?)"
+                        r"RATING(?:\s+(?:MÉDIO|M[ÉE]DIO))?(?:\s+DOS\s+CRIS?)?\s*([A-Z]{1,3}[+\-]?)",
+                        r"CRI\s+RATING\s*([A-Z]{1,3}[+\-]?)",
+                        r"([A-Z]{1,3}[+\-]?)\s+(?:RATING|CRI)"
                     ]
                 )
                 dividend_payout_raw = get_first_raw(raw_data, ["PAYOUT", "DIVIDEND PAYOUT"]) or find_regex_group(
                     page_text,
-                    [r"PAYOUT\s*([0-9.,]+%?)"]
+                    [
+                        r"PAYOUT\s*([0-9.,]+%?)",
+                        r"(?:DIVIDEND|DISTRIBUIÇÃO)\s+PAYOUT\s*([0-9.,]+%?)"
+                    ]
                 )
                 dividend_payout = parse_optional_brazilian_float(dividend_payout_raw)
 
                 if cdi_ipca:
                     result["%_cdi_ipca"] = cdi_ipca
-                if inadimplencia is not None:
+                if inadimplencia is not None and inadimplencia > 0:
                     result["inadimplencia"] = inadimplencia
-                if cri_ratings:
+                if cri_ratings and is_valid_rating(cri_ratings):
                     result["cri_ratings"] = cri_ratings
-                if cash_available is not None:
+                if cash_available is not None and cash_available > 0:
                     result["cash_available"] = cash_available
-                if dividend_payout is not None:
+                if dividend_payout is not None and dividend_payout > 0:
                     result["dividend_payout"] = dividend_payout
 
                 ensure_fundamentals_found(result)
