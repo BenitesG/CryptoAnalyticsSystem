@@ -41,21 +41,6 @@ def fetch_fundamentals_with_fallback(ticker: str):
         return "stock", data, None
     return None, None, status_code
 
-def _format_metric(label: str, value, is_percentage: bool = False, currency: str = None):
-    """Helper to format and render only non-empty metrics."""
-    if value is None or (isinstance(value, (int, float)) and value == 0):
-        return None
-    if isinstance(value, str) and value.upper() in ["N/A", "NA", "NONE", ""]:
-        return None
-    
-    if is_percentage and isinstance(value, (int, float)):
-        return f"{value:.2f}%"
-    elif currency and isinstance(value, (int, float)):
-        if isinstance(value, int) and value > 1000:
-            return f"{value:,.0f}"
-        return f"{currency} {value:.2f}"
-    return str(value)
-
 
 def _labelize_key(key: str) -> str:
     label_map = {
