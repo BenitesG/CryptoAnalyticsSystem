@@ -452,7 +452,7 @@ async def get_fundamentals(asset_type: str, ticker: str):
             else:
                 cash_available = parse_optional_brazilian_float(get_first_raw(raw_data, ["VALOR EM CAIXA", "CAIXA", "DISPONIBILIDADE"])) or parse_optional_brazilian_float(find_regex_group(
                     page_text,
-                    [r"(?:VALOR\s+)?EM\s+CAIXA\s*(?:R\$)?\s*([0-9.,]+)", r"CAIXA\s+([0-9.,]+%?)"]
+                    [r"(?:VALOR\s+)?EM\s+CAIXA\s*(?:R\$)?\s*([0-9.,]+)", r"CAIXA\s+([0-9.,]+)"]
                 ))
                 cdi_ipca = get_first_raw(raw_data, ["% CDI/IPCA", "CDI/IPCA", "CDI", "IPCA", "INDEXADOR"]) or find_regex_group(
                     page_text,
