@@ -428,23 +428,23 @@ async def get_fundamentals(asset_type: str, ticker: str):
                 )
                 inadimplencia = parse_optional_brazilian_float(inadimplencia_raw)
 
-                if vacancy is not None and vacancy > 0:
+                if vacancy is not None:
                     result["vacancy"] = vacancy
                 if properties_raw:
                     pc = parse_optional_brazilian_int(properties_raw)
-                    if pc is not None and pc > 0:
+                    if pc is not None:
                         result["properties_count"] = pc
                 if tenants_raw:
                     tn = parse_optional_brazilian_int(tenants_raw)
-                    if tn is not None and tn > 0:
+                    if tn is not None:
                         result["tenants_count"] = tn
-                if largest_tenant is not None and largest_tenant > 0:
+                if largest_tenant is not None:
                     result["largest_tenant_pct"] = largest_tenant
                 if avg_contract_term:
                     result["avg_contract_term"] = avg_contract_term
                 if contract_type:
                     result["contract_type"] = contract_type
-                if inadimplencia is not None and inadimplencia > 0:
+                if inadimplencia is not None:
                     result["inadimplencia"] = inadimplencia
 
                 ensure_fundamentals_found(result)
