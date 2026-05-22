@@ -41,25 +41,35 @@ def fetch_fundamentals(asset_type: str, ticker: str):
         ) from exc
 
 def fetch_fundamentals_with_fallback(ticker: str):
-    """Heurística: Tenta FII se terminar em 11, senão Ação. Faz fallback se der 404."""
-    try:
-        if ticker.endswith("11"):
+    """Heurística: Tenta FII se terminar em 11, senão Ação. Faz fallback em QUALQUER erro."""
+    
+    if ticker.endswith("11"):
+        # 1. Tenta como FII primeiro
+        try:
             status_code, data = fetch_fundamentals("fii", ticker)
             if data:
                 return "fii", data, None
-            if status_code == 404:
-                # Fallback para Ação (Units como TAEE11, SANB11)
-                fallback_status, data = fetch_fundamentals("stock", ticker)
-                if data:
-                    return "stock", data, None
-                return None, None, fallback_status
+        except FundamentalsFetchError:
+            pass # Ignora o erro de FII e segue para tentar como Ação
+            
+        # 2. Fallback para Ação (TAEE11, SANB11, etc)
+        try:
+            status_code, data = fetch_fundamentals("stock", ticker)
+            if data:
+                return "stock", data, None
             return None, None, status_code
-        status_code, data = fetch_fundamentals("stock", ticker)
-        if data:
-            return "stock", data, None
-        return None, None, status_code
-    except FundamentalsFetchError as exc:
-        return None, None, exc.status_code
+        except FundamentalsFetchError as exc:
+            return None, None, exc.status_code
+            
+    else:
+        # Se não terminar com 11, é certeza que é Ação
+        try:
+            status_code, data = fetch_fundamentals("stock", ticker)
+            if data:
+                return "stock", data, None
+            return None, None, status_code
+        except FundamentalsFetchError as exc:
+            return None, None, exc.status_code
 
 
 def _labelize_key(key: str) -> str:
@@ -308,7 +318,7 @@ if btn_search:
                             col2.metric("7-Day High", f"${fmt.format(analysis['max'])}")
                             
                             delta_color = "normal" if analysis['trend'] == "UP" else "inverse"
-                            col3.metric("Trend", analysis['trend'], f"{analysis['percentage_change']}%", delta_color=delta_color)
+                            col3.metric("Trend", analysis['trend'], f"{analysis['percentage_change']}%")
                             col4.metric("Volatility (Risk)", fmt.format(analysis['volatility']))
                             
                             signal = str(analysis.get("action_signal", "HOLD")).upper()
