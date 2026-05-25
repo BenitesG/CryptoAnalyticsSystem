@@ -8,7 +8,7 @@ import plotly.express as px
 API_CSHARP_URL = "http://localhost:5091"
 # TODO: Mudar para porta do C# quando o Proxy de fundamentos estiver pronto.
 # Temporariamente apontando para o FastAPI.
-API_BRAIN_URL = "http://localhost:8000" 
+API_BRAIN_URL = "http://localhost:5091"
 
 # --- FUNÇÕES DE FUNDAMENTOS ---
 class FundamentalsFetchError(RuntimeError):
