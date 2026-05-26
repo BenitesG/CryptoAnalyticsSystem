@@ -6,9 +6,8 @@ import plotly.express as px
 # --- CONSTANTES DE API ---
 # Porta do C# (Preço e Histórico)
 API_CSHARP_URL = "http://localhost:5091"
-# TODO: Mudar para porta do C# quando o Proxy de fundamentos estiver pronto.
-# Temporariamente apontando para o FastAPI.
-API_BRAIN_URL = "http://localhost:8000" 
+# Porta do C# (Fundamentos via proxy para o Python Engine)
+API_BRAIN_URL = "http://localhost:5091"
 
 # --- FUNÇÕES DE FUNDAMENTOS ---
 class FundamentalsFetchError(RuntimeError):
@@ -23,7 +22,7 @@ def _fetch_fundamentals_cached(asset_type: str, ticker: str):
     return response.json()
 
 def fetch_fundamentals(asset_type: str, ticker: str):
-    """Busca fundamentos no MarketBrain (FastAPI)."""
+    """Busca fundamentos no endpoint de proxy da API C#."""
     try:
         data = _fetch_fundamentals_cached(asset_type, ticker)
         return 200, data

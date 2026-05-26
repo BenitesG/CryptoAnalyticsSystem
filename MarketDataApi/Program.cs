@@ -39,6 +39,21 @@ builder.Services.AddHttpClient<BrapiService>()
     .AddTransientHttpErrorPolicy(policyBuilder => 
         policyBuilder.WaitAndRetryAsync(3, retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)))
     );
+
+var marketBrainBaseUrl = builder.Configuration["MarketBrain:BaseUrl"];
+if (!Uri.TryCreate(marketBrainBaseUrl, UriKind.Absolute, out var marketBrainBaseUri))
+{
+    throw new InvalidOperationException("MarketBrain:BaseUrl must be configured with a valid absolute URL.");
+}
+
+// Register Python Engine Service for Fundamentals
+builder.Services.AddHttpClient<MarketBrainService>(client =>
+{
+    client.BaseAddress = marketBrainBaseUri;
+})
+.AddTransientHttpErrorPolicy(policyBuilder => 
+    policyBuilder.WaitAndRetryAsync(2, retryAttempt => TimeSpan.FromSeconds(1))
+);
     
 builder.Services.AddTransient<Func<string, IMarketDataService>>(serviceProvider => assetType =>
 {
@@ -159,5 +174,36 @@ app.MapGet("/logs", async (AppDbContext db) =>
 
     return Results.Ok(logs);
 });
+
+app.MapGet("/fundamentals/{assetType}/{symbol}", async (
+    string assetType, 
+    string symbol, 
+    MarketBrainService brainService) => 
+{
+    var normalizedType = assetType.ToLowerInvariant();
+    
+    // Validar se não enviaram "crypto" para os fundamentos
+    if (normalizedType != "stock" && normalizedType != "fii")
+    {
+        return Results.BadRequest(new
+        {
+            message = $"Unsupported asset type '{assetType}' for fundamentals. Supported values are: 'stock', 'fii'."
+        });
+    }
+
+    var fundamentals = await brainService.GetFundamentalsAsync(normalizedType, symbol);
+
+    if (fundamentals == null)
+    {
+        return Results.NotFound(new 
+        { 
+            message = $"Fundamentals for asset '{symbol.ToUpperInvariant()}' not found.",
+            suggestion = "Asset might not exist or the data provider is unavailable."
+        });
+    }
+
+    return Results.Ok(fundamentals);
+})
+.RequireRateLimiting("MarketPolicy"); // Mantendo a segurança da sua API
 
 app.Run();

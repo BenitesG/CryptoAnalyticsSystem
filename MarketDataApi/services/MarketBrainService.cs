@@ -1,0 +1,49 @@
+using System.Text.Json.Nodes;
+using Microsoft.Extensions.Caching.Memory;
+using System.Net;
+
+namespace MarketDataApi.Services
+{
+    public class MarketBrainService
+    {
+        private readonly HttpClient _httpClient;
+        private readonly IMemoryCache _cache;
+        private readonly ILogger<MarketBrainService> _logger;
+
+        public MarketBrainService(HttpClient httpClient, IMemoryCache cache, ILogger<MarketBrainService> logger)
+        {
+            _httpClient = httpClient;
+            _cache = cache;
+            _logger = logger;
+        }
+
+        public async Task<JsonObject?> GetFundamentalsAsync(string assetType, string ticker)
+        {
+            string normalizedTicker = ticker.Trim().ToUpperInvariant();
+            string normalizedType = assetType.Trim().ToLowerInvariant();
+            
+            string cacheKey = $"fund_{normalizedType}_{normalizedTicker}";
+
+            return await _cache.GetOrCreateAsync(cacheKey, async (cacheOptions) =>
+            {
+                // Fundamentos mudam raramente. Cache longo de 10 minutos!
+                cacheOptions.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10);
+
+                _logger.LogInformation("Cache miss for {CacheKey}. Fetching fundamentals from Python Engine.", cacheKey);
+
+                using var response = await _httpClient.GetAsync($"/fundamentals/{normalizedType}/{normalizedTicker}");
+
+                if (response.StatusCode == HttpStatusCode.NotFound)
+                {
+                    _logger.LogWarning("Fundamentals not found for {Ticker} in Python Engine.", normalizedTicker);
+                    return null;
+                }
+
+                response.EnsureSuccessStatusCode();
+
+                // JsonObject permite retornar os dados de forma dinâmica (Tijolo, Papel ou Ação) sem quebrar o C#
+                return await response.Content.ReadFromJsonAsync<JsonObject>();
+            });
+        }
+    }
+}
