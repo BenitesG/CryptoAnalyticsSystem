@@ -40,10 +40,16 @@ builder.Services.AddHttpClient<BrapiService>()
         policyBuilder.WaitAndRetryAsync(3, retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)))
     );
 
+var marketBrainBaseUrl = builder.Configuration["MarketBrain:BaseUrl"];
+if (!Uri.TryCreate(marketBrainBaseUrl, UriKind.Absolute, out var marketBrainBaseUri))
+{
+    throw new InvalidOperationException("MarketBrain:BaseUrl must be configured with a valid absolute URL.");
+}
+
 // Register Python Engine Service for Fundamentals
 builder.Services.AddHttpClient<MarketBrainService>(client =>
 {
-    client.BaseAddress = new Uri("http://localhost:8000"); 
+    client.BaseAddress = marketBrainBaseUri;
 })
 .AddTransientHttpErrorPolicy(policyBuilder => 
     policyBuilder.WaitAndRetryAsync(2, retryAttempt => TimeSpan.FromSeconds(1))
@@ -191,7 +197,7 @@ app.MapGet("/fundamentals/{assetType}/{symbol}", async (
     {
         return Results.NotFound(new 
         { 
-            message = $"Fundamentals for asset '{symbol.ToUpper()}' not found.",
+            message = $"Fundamentals for asset '{symbol.ToUpperInvariant()}' not found.",
             suggestion = "Asset might not exist or the data provider is unavailable."
         });
     }
