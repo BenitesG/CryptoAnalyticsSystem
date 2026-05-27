@@ -207,3 +207,7 @@ app.MapGet("/fundamentals/{assetType}/{symbol}", async (
 .RequireRateLimiting("MarketPolicy"); // Mantendo a segurança da sua API
 
 app.Run();
+
+
+// Expose the Program class to the Test Project
+public partial class Program { }
