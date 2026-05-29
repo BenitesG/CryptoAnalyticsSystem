@@ -13,7 +13,7 @@ builder.Services.AddRateLimiter(options =>
 {
     options.AddFixedWindowLimiter("MarketPolicy", opt =>
     {
-        opt.PermitLimit = 5; 
+        opt.PermitLimit = 20;
         opt.Window = TimeSpan.FromSeconds(10); 
         opt.QueueLimit = 0; 
     });
