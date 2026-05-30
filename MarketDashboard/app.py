@@ -89,6 +89,7 @@ def _labelize_key(key: str) -> str:
         "vacancy": "Vacância",
         "properties_count": "Qtd. Imóveis",
         "tenants_count": "Qtd. Inquilinos",
+        "tenant_count": "Qtd. Inquilinos",
         "largest_tenant_pct": "Maior Inquilino (%)",
         "avg_contract_term": "Prazo Médio Contratos",
         "contract_type": "Tipo Contrato",
@@ -106,64 +107,96 @@ def _labelize_key(key: str) -> str:
     return label_map.get(key, key.replace("_", " ").title())
 
 
-def _format_value(value) -> str:
+def _is_meaningful(value) -> bool:
+    if value is None:
+        return False
+    if isinstance(value, str):
+        return value.strip() not in {"", "-", "--", "N/A"}
+    if isinstance(value, (int, float)):
+        return value != 0
+    return True
+
+
+def _format_value(value, key: str | None = None) -> str:
     if value is None:
         return ""
+    if key in {"dy", "roe", "net_margin", "vacancy", "largest_tenant_pct", "inadimplencia", "dividend_payout", "cagr_5y"}:
+        if isinstance(value, (int, float)):
+            return f"{value:.2f}%"
+    if key in {"properties_count", "tenant_count", "tenants_count"}:
+        if isinstance(value, (int, float)):
+            return f"{value:.0f}"
     if isinstance(value, float):
         return f"{value:.2f}"
     if isinstance(value, int):
         return f"{value:,}"
     return str(value)
 
+
+def _render_metric_rows(metrics: list[tuple[str, str]]):
+    if not metrics:
+        return
+    cols = st.columns(min(3, len(metrics)))
+    for idx, (label, value) in enumerate(metrics):
+        with cols[idx % len(cols)]:
+            st.metric(label, value)
+
 def render_fundamentals_ui(asset_type: str, data: dict):
     """Renders fundamentals grid - only shows non-empty/non-zero fields."""
-    st.markdown("##### 🏢 Indicadores Fundamentalista")
+    st.markdown("##### 🏢 Indicadores Fundamentalistas")
     
     if asset_type == "stock":
         sector = data.get('sector')
         if sector:
             st.caption(f"**Setor:** {sector}")
         
-        metrics = []
+        metrics: list[tuple[str, str]] = []
         p_l = data.get("p_l")
         if p_l is not None and p_l != 0:
-            metrics.append(("P/L", p_l))
+            metrics.append(("P/L", _format_value(p_l, "p_l")))
         p_vp = data.get("p_vp")
         if p_vp is not None and p_vp != 0:
-            metrics.append(("P/VP", p_vp))
+            metrics.append(("P/VP", _format_value(p_vp, "p_vp")))
         dy = data.get('dy')
         if dy is not None and dy > 0:
-            metrics.append(("DY", f"{dy:.2f}%"))
+            metrics.append(("DY", _format_value(dy, "dy")))
         roe = data.get("roe")
         if roe is not None and roe != 0:
-            metrics.append(("ROE", f"{roe:.2f}%"))
+            metrics.append(("ROE", _format_value(roe, "roe")))
         debt_ebitda = data.get("debt_ebitda")
         if debt_ebitda is not None and debt_ebitda != 0:
-            metrics.append(("Dív. Líquida/EBITDA", debt_ebitda))
+            metrics.append(("Dív. Líquida/EBITDA", _format_value(debt_ebitda, "debt_ebitda")))
         cagr = data.get('cagr_5y')
         if cagr is not None and cagr != 0:
-            metrics.append(("CAGR Lucros (5A)", f"{cagr:.2f}%"))
+            metrics.append(("CAGR Lucros (5A)", _format_value(cagr, "cagr_5y")))
+        net_margin = data.get("net_margin")
+        if net_margin is not None and net_margin != 0:
+            metrics.append(("Margem Líquida", _format_value(net_margin, "net_margin")))
         
-        if metrics:
-            cols = st.columns(min(3, len(metrics)))
-            for idx, (label, value) in enumerate(metrics):
-                with cols[idx % len(cols)]:
-                    st.metric(label, value)
+        _render_metric_rows(metrics)
 
-        displayed_keys = {
-            "sector", "p_l", "p_vp", "dy", "roe", "debt_ebitda", "cagr_5y"
-        }
-        extras = [(k, v) for k, v in data.items() if k not in displayed_keys and k != "ticker" and v is not None]
+        displayed_keys = {"sector", "p_l", "p_vp", "dy", "roe", "debt_ebitda", "cagr_5y", "net_margin"}
+        stock_priority = [
+            "liquidez_media_diaria", "valor_patrimonial_cota", "patrimonio_liquido",
+            "numero_cotistas", "ultimo_rendimento", "data_pagamento"
+        ]
+        extras = [
+            (k, v)
+            for k in stock_priority
+            if k in data and _is_meaningful(data.get(k))
+            for v in [data.get(k)]
+        ] + [
+            (k, v)
+            for k, v in data.items()
+            if k not in displayed_keys and k != "ticker" and k not in stock_priority and _is_meaningful(v)
+        ]
         if extras:
             st.divider()
-            cols = st.columns(min(3, len(extras)))
-            for idx, (key, value) in enumerate(extras):
-                with cols[idx % len(cols)]:
-                    st.metric(_labelize_key(key), _format_value(value))
+            _render_metric_rows([(_labelize_key(key), _format_value(value, key)) for key, value in extras])
         
     elif asset_type == "fii":
         fii_type_raw = data.get('tipo_fii', 'N/A').lower()
-        fii_type_pt = "Tijolo" if "tijolo" in fii_type_raw else "Papel" if "papel" in fii_type_raw else "Híbrido"
+        fii_type_pt = "Tijolo" if "tijolo" in fii_type_raw else "Papel" if "papel" in fii_type_raw else "FOF" if "fof" in fii_type_raw else "Híbrido"
         
         segment = data.get('segment', '')
         caption_text = f"**Tipo:** {fii_type_pt}"
@@ -172,43 +205,45 @@ def render_fundamentals_ui(asset_type: str, data: dict):
         st.caption(caption_text)
         
         # Common FII Metrics
-        common_metrics = []
+        common_metrics: list[tuple[str, str]] = []
         pvp = data.get("p_vp")
         if pvp is not None and pvp != 0:
-            common_metrics.append(("P/VP", pvp))
-        if "papel" in fii_type_raw:
-            dy = data.get('dy')
-            if dy is not None and dy > 0:
-                common_metrics.append(("DY", f"{dy:.2f}%"))
-        
-        if common_metrics:
-            cols = st.columns(min(3, len(common_metrics)))
-            for idx, (label, value) in enumerate(common_metrics):
-                with cols[idx % len(cols)]:
-                    st.metric(label, value)
+            common_metrics.append(("P/VP", _format_value(pvp, "p_vp")))
+        dy = data.get('dy')
+        if dy is not None and dy > 0:
+            common_metrics.append(("DY", _format_value(dy, "dy")))
+        payout = data.get("dividend_payout")
+        if payout is not None and payout > 0:
+            common_metrics.append(("Dividend Payout", _format_value(payout, "dividend_payout")))
+
+        _render_metric_rows(common_metrics)
         
         # Specific Brick FII Metrics
         if "tijolo" in fii_type_raw:
             st.divider()
-            brick_metrics = []
+            brick_metrics: list[tuple[str, str]] = []
             vacancy = data.get('vacancy')
             if vacancy is not None and vacancy > 0:
-                brick_metrics.append(("Vacância", f"{vacancy:.2f}%"))
-            
-            if brick_metrics:
-                cols = st.columns(min(3, len(brick_metrics)))
-                for idx, (label, value) in enumerate(brick_metrics):
-                    with cols[idx % len(cols)]:
-                        st.metric(label, value)
-            
-            # Second row for Brick
-            brick_metrics2 = []
+                brick_metrics.append(("Vacância", _format_value(vacancy, "vacancy")))
+            properties_count = data.get("properties_count")
+            if properties_count is not None and properties_count > 0:
+                brick_metrics.append(("Qtd. Imóveis", _format_value(properties_count, "properties_count")))
+            tenant_count = data.get("tenant_count")
+            if tenant_count is not None and tenant_count > 0:
+                brick_metrics.append(("Qtd. Inquilinos", _format_value(tenant_count, "tenant_count")))
             largest = data.get('largest_tenant_pct')
             if largest is not None and largest > 0:
-                brick_metrics2.append(("Concentração Inquilinos", f"{largest:.2f}%"))
+                brick_metrics.append(("Concentração Inquilinos", _format_value(largest, "largest_tenant_pct")))
             term = data.get("avg_contract_term")
             if term:
-                brick_metrics2.append(("Prazo Contratos", term))
+                brick_metrics.append(("Prazo Contratos", _format_value(term, "avg_contract_term")))
+            contract_type = data.get("contract_type")
+            if contract_type:
+                brick_metrics.append(("Tipo Contrato", _format_value(contract_type, "contract_type")))
+            
+            _render_metric_rows(brick_metrics)
+
+            brick_metrics2: list[tuple[str, str]] = []
             localizacao = data.get("localizacao")
             if localizacao:
                 brick_metrics2.append(("Localização", localizacao))
@@ -218,46 +253,51 @@ def render_fundamentals_ui(asset_type: str, data: dict):
             
             if brick_metrics2:
                 st.divider()
-                cols = st.columns(len(brick_metrics2))
-                for idx, (label, value) in enumerate(brick_metrics2):
-                    with cols[idx]:
-                        st.metric(label, value)
+                _render_metric_rows(brick_metrics2)
             
         # Specific Paper FII Metrics
         elif "papel" in fii_type_raw:
             st.divider()
-            paper_metrics = []
+            paper_metrics: list[tuple[str, str]] = []
             cdi = data.get("%_cdi_ipca")
             if cdi:
-                paper_metrics.append(("Indexador", cdi))
+                paper_metrics.append(("Indexador", _format_value(cdi, "%_cdi_ipca")))
             inad = data.get('inadimplencia')
             if inad is not None and inad > 0:
-                paper_metrics.append(("Inadimplência", f"{inad:.2f}%"))
+                paper_metrics.append(("Inadimplência", _format_value(inad, "inadimplencia")))
             qualidade_cris = data.get("qualidade_cris")
             if qualidade_cris:
                 paper_metrics.append(("Qualidade CRIs", qualidade_cris))
             cri_ratings = data.get("cri_ratings")
             if cri_ratings and not qualidade_cris:
                 paper_metrics.append(("Qualidade CRIs", cri_ratings))
+            cash_available = data.get("cash_available")
+            if cash_available is not None and cash_available > 0:
+                paper_metrics.append(("Caixa Disponível", _format_value(cash_available, "cash_available")))
             
-            if paper_metrics:
-                cols = st.columns(min(3, len(paper_metrics)))
-                for idx, (label, value) in enumerate(paper_metrics):
-                    with cols[idx % len(cols)]:
-                        st.metric(label, value)
+            _render_metric_rows(paper_metrics)
 
         displayed_keys = {
             "tipo_fii", "segment", "p_vp", "dy", "vacancy", "largest_tenant_pct", "avg_contract_term",
-            "localizacao", "qualidade_imoveis", "%_cdi_ipca", "inadimplencia", "qualidade_cris",
-            "cri_ratings"
+            "localizacao", "qualidade_imoveis", "%_cdi_ipca", "inadimplencia", "qualidade_cris", "cri_ratings",
+            "dividend_payout", "properties_count"
         }
-        extras = [(k, v) for k, v in data.items() if k not in displayed_keys and k != "ticker" and v is not None]
+        fii_priority = [
+            "numero_cotistas", "tenant_count", "tenants_count", "contract_type", "cash_available"
+        ]
+        extras = [
+            (k, v)
+            for k in fii_priority
+            if k in data and _is_meaningful(data.get(k)) and k not in displayed_keys
+            for v in [data.get(k)]
+        ] + [
+            (k, v)
+            for k, v in data.items()
+            if k not in displayed_keys and k != "ticker" and k not in fii_priority and _is_meaningful(v)
+        ]
         if extras:
             st.divider()
-            cols = st.columns(min(3, len(extras)))
-            for idx, (key, value) in enumerate(extras):
-                with cols[idx % len(cols)]:
-                    st.metric(_labelize_key(key), _format_value(value))
+            _render_metric_rows([(_labelize_key(key), _format_value(value, key)) for key, value in extras])
 
 # --- CONFIGURAÇÃO DA PÁGINA ---
 st.set_page_config(page_title="Market Analytics", layout="wide")
