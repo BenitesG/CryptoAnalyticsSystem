@@ -8,7 +8,7 @@ This project follows **Separation of Concerns** by splitting transactional workl
 
 ## 🧩 Architecture Diagram
 
-![Architecture Diagram](docs/architecture-clean.svg)
+![Architecture Diagram](docs/architecture-clean.png)
 
 1. **Orchestrator & API Gateway (C# / ASP.NET Core 8)**
    - API gateway using the Factory Pattern (`IMarketDataService`) to route requests by asset type.

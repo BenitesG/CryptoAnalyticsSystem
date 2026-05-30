@@ -1,87 +1,74 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="900" viewBox="0 0 1400 900">
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="900" viewBox="0 0 1200 900">
   <defs>
-    <style>
-      .bg { fill: #f7f8fb; }
-      .card { fill: #ffffff; stroke: #d8dee9; stroke-width: 2; rx: 12; }
-      .title { font: 700 22px 'Segoe UI', Arial, sans-serif; fill: #1b2430; }
-      .label { font: 600 14px 'Segoe UI', Arial, sans-serif; fill: #1b2430; }
-      .small { font: 12px 'Segoe UI', Arial, sans-serif; fill: #556070; }
-      .accent { fill: #2f6fed; }
-      .accent-text { font: 700 13px 'Segoe UI', Arial, sans-serif; fill: #2f6fed; }
-      .line { stroke: #9aa7b6; stroke-width: 2; fill: none; marker-end: url(#arrow); }
-      .line-soft { stroke: #c2cad5; stroke-width: 2; fill: none; marker-end: url(#arrow); }
-    </style>
     <marker id="arrow" markerWidth="10" markerHeight="8" refX="8" refY="4" orient="auto">
-      <path d="M0,0 L10,4 L0,8 Z" fill="#9aa7b6" />
+      <path d="M0,0 L10,4 L0,8 Z" fill="#8a97a8" />
     </marker>
   </defs>
 
-  <rect class="bg" x="0" y="0" width="1400" height="900" />
+  <rect x="0" y="0" width="1200" height="900" fill="#f6f7fb" />
 
-  <text class="title" x="40" y="50">Multi-Asset Market Analytics System</text>
-  <text class="small" x="40" y="75">Clean architecture overview (C# Orchestrator + Python Analytics)</text>
+  <text x="40" y="50" font-family="Segoe UI, Arial, sans-serif" font-size="22" font-weight="700" fill="#1c2430">Multi-Asset Market Analytics System</text>
+  <text x="40" y="75" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#556070">C# Orchestrator + Python Analytics (Fundamentus)</text>
 
-  <!-- User -->
-  <rect class="card" x="40" y="140" width="220" height="80" />
-  <text class="label" x="70" y="185">User / Client</text>
-  <text class="small" x="70" y="205">Multi-asset queries</text>
+  <!-- Row 1: User + UI -->
+  <rect x="120" y="120" width="220" height="80" rx="14" fill="#ffffff" stroke="#d5dbe6" stroke-width="2" />
+  <text x="150" y="165" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="600" fill="#1c2430">User / Client</text>
+  <text x="150" y="185" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#556070">Multi-asset queries</text>
 
-  <!-- Streamlit UI -->
-  <rect class="card" x="320" y="120" width="260" height="120" />
-  <rect x="340" y="140" width="80" height="28" rx="6" fill="#e7f0ff" />
-  <text class="accent-text" x="352" y="160">UI</text>
-  <text class="label" x="340" y="195">Streamlit Dashboard</text>
-  <text class="small" x="340" y="215">Plotly charts + metrics</text>
+  <rect x="420" y="105" width="300" height="110" rx="14" fill="#ffffff" stroke="#d5dbe6" stroke-width="2" />
+  <rect x="440" y="125" width="92" height="28" rx="6" fill="#e9f0ff" />
+  <text x="455" y="144" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="700" fill="#2f6fed">UI</text>
+  <text x="440" y="175" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="600" fill="#1c2430">Streamlit Dashboard</text>
+  <text x="440" y="195" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#556070">Plotly charts + metrics</text>
 
-  <!-- C# API Gateway -->
-  <rect class="card" x="650" y="110" width="500" height="180" />
-  <text class="label" x="680" y="145">MarketDataApi (C# .NET 8)</text>
-  <rect x="680" y="165" width="200" height="40" rx="8" fill="#edf2ff" />
-  <text class="small" x="694" y="190">API Gateway / Router</text>
-  <rect x="900" y="165" width="210" height="40" rx="8" fill="#edf2ff" />
-  <text class="small" x="914" y="190">In-memory Cache</text>
-  <rect x="680" y="215" width="180" height="40" rx="8" fill="#edf2ff" />
-  <text class="small" x="694" y="240">Polly Retry</text>
-  <rect x="870" y="215" width="240" height="40" rx="8" fill="#edf2ff" />
-  <text class="small" x="884" y="240">EF Core + Audit Logs</text>
+  <!-- Row 2: C# Gateway (centered) -->
+  <rect x="230" y="265" width="740" height="180" rx="16" fill="#ffffff" stroke="#d5dbe6" stroke-width="2" />
+  <text x="260" y="300" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="600" fill="#1c2430">MarketDataApi (C# .NET 8)</text>
+  <rect x="260" y="320" width="220" height="42" rx="8" fill="#e9f0ff" />
+  <text x="274" y="346" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#556070">API Gateway / Router</text>
+  <rect x="500" y="320" width="210" height="42" rx="8" fill="#e9f0ff" />
+  <text x="514" y="346" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#556070">In-memory Cache</text>
+  <rect x="260" y="370" width="190" height="42" rx="8" fill="#e9f0ff" />
+  <text x="274" y="396" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#556070">Polly Retry</text>
+  <rect x="470" y="370" width="250" height="42" rx="8" fill="#e9f0ff" />
+  <text x="484" y="396" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#556070">EF Core + Audit Logs</text>
 
-  <!-- Python Analytics -->
-  <rect class="card" x="290" y="360" width="350" height="210" />
-  <text class="label" x="320" y="395">MarketBrain (Python)</text>
-  <rect x="320" y="415" width="140" height="36" rx="8" fill="#ecf7ff" />
-  <text class="small" x="332" y="438">FastAPI Engine</text>
-  <rect x="320" y="465" width="140" height="36" rx="8" fill="#ecf7ff" />
-  <text class="small" x="332" y="488">NumPy Signals</text>
-  <rect x="480" y="465" width="140" height="36" rx="8" fill="#ecf7ff" />
-  <text class="small" x="492" y="488">BS4 Scraper</text>
-  <text class="small" x="320" y="530">Fundamentus fundamentals</text>
+  <!-- Row 3: Python + External APIs -->
+  <rect x="120" y="500" width="360" height="200" rx="16" fill="#ffffff" stroke="#d5dbe6" stroke-width="2" />
+  <text x="150" y="535" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="600" fill="#1c2430">MarketBrain (Python)</text>
+  <rect x="150" y="555" width="160" height="38" rx="8" fill="#e9f0ff" />
+  <text x="164" y="579" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#556070">FastAPI Engine</text>
+  <rect x="150" y="605" width="160" height="38" rx="8" fill="#e9f0ff" />
+  <text x="164" y="629" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#556070">NumPy Signals</text>
+  <rect x="330" y="605" width="130" height="38" rx="8" fill="#e9f0ff" />
+  <text x="344" y="629" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#556070">BS4 Scraper</text>
+  <text x="150" y="665" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#556070">Fundamentus fundamentals</text>
 
-  <!-- External APIs -->
-  <rect class="card" x="700" y="360" width="200" height="90" />
-  <text class="label" x="720" y="400">Brapi API</text>
-  <text class="small" x="720" y="422">B3 prices</text>
+  <rect x="540" y="520" width="200" height="90" rx="14" fill="#ffffff" stroke="#d5dbe6" stroke-width="2" />
+  <text x="560" y="560" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="600" fill="#1c2430">Brapi API</text>
+  <text x="560" y="582" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#556070">B3 prices</text>
 
-  <rect class="card" x="940" y="360" width="200" height="90" />
-  <text class="label" x="960" y="400">CoinGecko</text>
-  <text class="small" x="960" y="422">Crypto prices</text>
+  <rect x="780" y="520" width="200" height="90" rx="14" fill="#ffffff" stroke="#d5dbe6" stroke-width="2" />
+  <text x="800" y="560" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="600" fill="#1c2430">CoinGecko</text>
+  <text x="800" y="582" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#556070">Crypto prices</text>
 
-  <!-- Database -->
-  <rect class="card" x="1040" y="540" width="200" height="110" />
-  <text class="label" x="1060" y="580">PostgreSQL</text>
-  <text class="small" x="1060" y="602">Search logs</text>
-  <text class="small" x="1060" y="622">Audit trails</text>
+  <!-- Row 4: Database -->
+  <rect x="820" y="700" width="220" height="110" rx="16" fill="#ffffff" stroke="#d5dbe6" stroke-width="2" />
+  <text x="840" y="745" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="600" fill="#1c2430">PostgreSQL</text>
+  <text x="840" y="768" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#556070">Search logs</text>
+  <text x="840" y="788" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#556070">Audit trails</text>
 
   <!-- Lines -->
-  <path class="line" d="M260 180 L320 180" />
-  <path class="line" d="M580 180 L650 180" />
-  <path class="line" d="M820 290 L520 360" />
-  <path class="line" d="M820 290 L800 360" />
-  <path class="line" d="M900 290 L1000 360" />
-  <path class="line" d="M990 255 L1110 540" />
+  <path d="M340 160 L420 160" stroke="#8a97a8" stroke-width="2.5" fill="none" marker-end="url(#arrow)" />
+  <path d="M570 215 L600 265" stroke="#8a97a8" stroke-width="2.5" fill="none" marker-end="url(#arrow)" />
+  <path d="M520 445 L300 500" stroke="#8a97a8" stroke-width="2.5" fill="none" marker-end="url(#arrow)" />
+  <path d="M650 445 L640 505" stroke="#8a97a8" stroke-width="2.5" fill="none" marker-end="url(#arrow)" />
+  <path d="M760 445 L870 505" stroke="#8a97a8" stroke-width="2.5" fill="none" marker-end="url(#arrow)" />
+  <path d="M900 445 L900 700" stroke="#8a97a8" stroke-width="2.5" fill="none" marker-end="url(#arrow)" />
 
-  <text class="small" x="520" y="165">HTTP GET</text>
-  <text class="small" x="720" y="330">Math + Fundamentals</text>
-  <text class="small" x="830" y="330">B3 Data</text>
-  <text class="small" x="1020" y="330">Crypto Data</text>
-  <text class="small" x="1060" y="520">Logs & Persistence</text>
+  <text x="545" y="144" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#556070">HTTP GET</text>
+  <text x="500" y="470" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#556070">Math + Fundamentals</text>
+  <text x="600" y="480" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#556070">B3 Data</text>
+  <text x="880" y="480" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#556070">Crypto Data</text>
+  <text x="940" y="690" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#556070">Logs & Persistence</text>
 </svg>
