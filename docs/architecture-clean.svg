@@ -1,0 +1,87 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="900" viewBox="0 0 1400 900">
+  <defs>
+    <style>
+      .bg { fill: #f7f8fb; }
+      .card { fill: #ffffff; stroke: #d8dee9; stroke-width: 2; rx: 12; }
+      .title { font: 700 22px 'Segoe UI', Arial, sans-serif; fill: #1b2430; }
+      .label { font: 600 14px 'Segoe UI', Arial, sans-serif; fill: #1b2430; }
+      .small { font: 12px 'Segoe UI', Arial, sans-serif; fill: #556070; }
+      .accent { fill: #2f6fed; }
+      .accent-text { font: 700 13px 'Segoe UI', Arial, sans-serif; fill: #2f6fed; }
+      .line { stroke: #9aa7b6; stroke-width: 2; fill: none; marker-end: url(#arrow); }
+      .line-soft { stroke: #c2cad5; stroke-width: 2; fill: none; marker-end: url(#arrow); }
+    </style>
+    <marker id="arrow" markerWidth="10" markerHeight="8" refX="8" refY="4" orient="auto">
+      <path d="M0,0 L10,4 L0,8 Z" fill="#9aa7b6" />
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="1400" height="900" />
+
+  <text class="title" x="40" y="50">Multi-Asset Market Analytics System</text>
+  <text class="small" x="40" y="75">Clean architecture overview (C# Orchestrator + Python Analytics)</text>
+
+  <!-- User -->
+  <rect class="card" x="40" y="140" width="220" height="80" />
+  <text class="label" x="70" y="185">User / Client</text>
+  <text class="small" x="70" y="205">Multi-asset queries</text>
+
+  <!-- Streamlit UI -->
+  <rect class="card" x="320" y="120" width="260" height="120" />
+  <rect x="340" y="140" width="80" height="28" rx="6" fill="#e7f0ff" />
+  <text class="accent-text" x="352" y="160">UI</text>
+  <text class="label" x="340" y="195">Streamlit Dashboard</text>
+  <text class="small" x="340" y="215">Plotly charts + metrics</text>
+
+  <!-- C# API Gateway -->
+  <rect class="card" x="650" y="110" width="500" height="180" />
+  <text class="label" x="680" y="145">MarketDataApi (C# .NET 8)</text>
+  <rect x="680" y="165" width="200" height="40" rx="8" fill="#edf2ff" />
+  <text class="small" x="694" y="190">API Gateway / Router</text>
+  <rect x="900" y="165" width="210" height="40" rx="8" fill="#edf2ff" />
+  <text class="small" x="914" y="190">In-memory Cache</text>
+  <rect x="680" y="215" width="180" height="40" rx="8" fill="#edf2ff" />
+  <text class="small" x="694" y="240">Polly Retry</text>
+  <rect x="870" y="215" width="240" height="40" rx="8" fill="#edf2ff" />
+  <text class="small" x="884" y="240">EF Core + Audit Logs</text>
+
+  <!-- Python Analytics -->
+  <rect class="card" x="290" y="360" width="350" height="210" />
+  <text class="label" x="320" y="395">MarketBrain (Python)</text>
+  <rect x="320" y="415" width="140" height="36" rx="8" fill="#ecf7ff" />
+  <text class="small" x="332" y="438">FastAPI Engine</text>
+  <rect x="320" y="465" width="140" height="36" rx="8" fill="#ecf7ff" />
+  <text class="small" x="332" y="488">NumPy Signals</text>
+  <rect x="480" y="465" width="140" height="36" rx="8" fill="#ecf7ff" />
+  <text class="small" x="492" y="488">BS4 Scraper</text>
+  <text class="small" x="320" y="530">Fundamentus fundamentals</text>
+
+  <!-- External APIs -->
+  <rect class="card" x="700" y="360" width="200" height="90" />
+  <text class="label" x="720" y="400">Brapi API</text>
+  <text class="small" x="720" y="422">B3 prices</text>
+
+  <rect class="card" x="940" y="360" width="200" height="90" />
+  <text class="label" x="960" y="400">CoinGecko</text>
+  <text class="small" x="960" y="422">Crypto prices</text>
+
+  <!-- Database -->
+  <rect class="card" x="1040" y="540" width="200" height="110" />
+  <text class="label" x="1060" y="580">PostgreSQL</text>
+  <text class="small" x="1060" y="602">Search logs</text>
+  <text class="small" x="1060" y="622">Audit trails</text>
+
+  <!-- Lines -->
+  <path class="line" d="M260 180 L320 180" />
+  <path class="line" d="M580 180 L650 180" />
+  <path class="line" d="M820 290 L520 360" />
+  <path class="line" d="M820 290 L800 360" />
+  <path class="line" d="M900 290 L1000 360" />
+  <path class="line" d="M990 255 L1110 540" />
+
+  <text class="small" x="520" y="165">HTTP GET</text>
+  <text class="small" x="720" y="330">Math + Fundamentals</text>
+  <text class="small" x="830" y="330">B3 Data</text>
+  <text class="small" x="1020" y="330">Crypto Data</text>
+  <text class="small" x="1060" y="520">Logs & Persistence</text>
+</svg>

@@ -16,9 +16,9 @@ We implemented a polyglot, multi-tier architecture to enforce a strict **Separat
    - Data Mapping: Maps complex external responses to strictly typed DTOs.
 
 2. **Analytical Engine (Python / FastAPI):**
-   - Fundamental Analysis: Implemented a **Web Scraping module** using `BeautifulSoup` to extract fundamental data (P/L, P/VP, Yield) from the web.
+   - Fundamental Analysis: Implemented a **Web Scraping module** using `BeautifulSoup` to extract fundamentals from Fundamentus.
    - Mathematical Processing: Uses **NumPy** for volatility and trend calculation.
-   - Data Normalization: Implemented a robust cleansing pipeline to transform localized Brazilian strings (e.g., "5,48%") into standardized float values.
+   - Data Normalization: Implemented a robust cleansing pipeline to transform localized Brazilian strings (e.g., "5,48%") into standardized float values and classify FIIs by type.
 
 3. **Presentation Layer (Python / Streamlit):**
    - Decoupled frontend using `Streamlit` and `Plotly` for interactive financial data visualization.
@@ -30,5 +30,5 @@ We implemented a polyglot, multi-tier architecture to enforce a strict **Separat
 - **Maintainability:** Separation of analytical logic (Python) and transactional routing (C#) allows independent testing.
 
 **Negative:**
-- **Scraping Fragility:** Web scraping relies on HTML structure. If the source website (StatusInvest) changes its CSS classes, the scraping module will require maintenance.
+- **Scraping Fragility:** Web scraping relies on HTML structure. If the source website (Fundamentus) changes its markup, the scraping module will require maintenance.
 - **Data Normalization Overhead:** The need to handle localized strings ("R$", "%", ",") adds complexity to the transformation layer.

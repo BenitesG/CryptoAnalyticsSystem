@@ -1,122 +1,130 @@
 # 📊 Multi-Asset Market Analytics System
 
-A distributed, polyglot microservices architecture designed to fetch, persist, and analyze data from both **Cryptocurrencies** and **Traditional Markets (B3 Stocks/REITs)** in real-time.
+A production-style, polyglot microservices system to **fetch, persist, and analyze** both **Cryptocurrencies** and **B3 Stocks/REITs** in near real time.
 
-## 🏗️ Architecture Overview
+## 🧭 Overview
 
-This project implements a strict **Separation of Concerns** pattern, dividing transactional workloads from analytical processing and data ingestion using two different ecosystems (C# and Python).
+This project follows **Separation of Concerns** by splitting transactional workloads (C#) from analytical processing and scraping (Python), keeping ingestion, analytics, and persistence cleanly isolated.
+
+## 🧩 Architecture Diagram
+
+![Architecture Diagram](docs/architecture-clean.svg)
 
 1. **Orchestrator & API Gateway (C# / ASP.NET Core 8)**
-   - Acts as the main API gateway, utilizing the **Factory Pattern** (`IMarketDataService`) to dynamically route requests based on asset type.
-   - Fetches real-time and historical data from external APIs (**CoinGecko** for Crypto, **Brapi** for B3).
-   - Handles data persistence, audit logging, and in-memory caching for high performance.
-   - Resilient HTTP requests configured with **Polly** (Exponential Backoff and Retry Patterns).
+   - API gateway using the Factory Pattern (`IMarketDataService`) to route requests by asset type.
+   - Real-time and historical data ingestion (CoinGecko for crypto, Brapi for B3).
+   - Persistence, audit logging, and in-memory caching for fast responses.
+   - Resilient HTTP clients configured with Polly.
 
-2. **Analytical Brain & Data Ingestion (Python / FastAPI)**
-   - A dedicated microservice for mathematical processing and **Advanced Web Scraping**.
-   - **Scraping Engine:** Uses `BeautifulSoup` and Regular Expressions (`re`) to dynamically extract fundamental indicators (P/E, P/VP, Vacancy, Dividend Yield) from financial portals.
-   - **Data Cleansing Pipeline:** Normalizes complex Brazilian financial strings, handles unicode/accents, and dynamically categorizes Real Estate Funds (Brick vs. Paper REITs).
-   - **Trading Signals:** Calculates trends, percentage changes, and market volatility (risk) using `NumPy`, returning actionable insights (BUY/SELL/HOLD) to the orchestrator.
+2. **Analytical Brain (Python / FastAPI)**
+   - Mathematical analysis plus fundamentals scraping.
+   - **Fundamentals Scraper:** Pulls B3 fundamentals from Fundamentus and normalizes Brazilian financial formats.
+   - **FII Classification:** Categorizes FIIs as `tijolo`, `papel`, or `fof` using label analysis and known overrides.
+   - **Trading Signals:** Computes trend, percentage change, and volatility using NumPy.
 
-3. **Persistence Layer (PostgreSQL & Docker)**
-   - Containerized relational database.
-   - Stores search logs and audit trails using Entity Framework Core (Code-First approach).
+3. **Persistence Layer (PostgreSQL + Docker)**
+   - Containerized database for local development.
+   - Stores search logs and audit trails (EF Core, code-first).
 
-4. **Data Visualization Frontend (Python / Streamlit)**
-   - An interactive dashboard providing a user-friendly interface.
-   - Allows users to toggle between Crypto and B3 markets, view analytical cards, and compare multiple assets simultaneously using interactive **Plotly** charts.
-   - Generates and streams downloadable CSV reports in-memory without polluting the server disk.
+4. **Data Visualization (Python / Streamlit)**
+   - Interactive dashboard with multi-asset comparisons and Plotly charts.
+   - Generates CSV downloads in memory.
+   - Fallback logic: if a ticker ends with `11`, the UI tries FII first and falls back to stock.
 
-## 🚀 Tech Stack
+## 🧰 Tech Stack
 
-- **Backend (Transactional):** C# .NET 8, ASP.NET Core Minimal APIs, Polly
-- **Backend (Analytical/Scraping):** Python 3, FastAPI, Pydantic, NumPy, BeautifulSoup4, Regex
-- **Database:** PostgreSQL 
-- **ORM:** Entity Framework Core (EF Core)
+- **Transactional Backend:** C# .NET 8, ASP.NET Core Minimal APIs, Polly
+- **Analytical/Scraping:** Python 3, FastAPI, Pydantic, NumPy, BeautifulSoup4
+- **Database:** PostgreSQL
+- **ORM:** Entity Framework Core
 - **Infrastructure:** Docker, Docker Compose
-- **Patterns Used:** Dependency Injection, Factory Pattern, In-Memory Caching, DTOs, Asynchronous Programming.
-- **Frontend:** Python, Streamlit, Pandas, Plotly Express
+- **Frontend:** Streamlit, Pandas, Plotly Express
 
 ## ⚙️ Configuration
 
-Before running the application, you need to configure your database credentials and API Keys:
+Before running the app, configure database credentials and API keys:
 
-1. Locate the `MarketDataApi` folder.
-2. Copy `appsettings.example.json` to `appsettings.json`.
-3. Open `appsettings.json` and update the `DefaultConnection` string with your PostgreSQL credentials.
-4. Add your free API Keys for the data providers (e.g., Brapi API Key).
+1. In [MarketDataApi](MarketDataApi), copy [MarketDataApi/appsettings.example.json](MarketDataApi/appsettings.example.json) to [MarketDataApi/appsettings.json](MarketDataApi/appsettings.json).
+2. Update `DefaultConnection` with your PostgreSQL credentials.
+3. Add your API keys (for example, Brapi).
 
-> 🔒 **Security note:** The database credentials provided in this repository are for local development purposes only. In production environments, always use Environment Variables or Secret Managers. Never commit your `appsettings.json` or `.env` files.
+> 🔒 **Security note:** Keep [MarketDataApi/appsettings.json](MarketDataApi/appsettings.json) and `.env` files out of source control. Use environment variables or secret managers in production.
 
-## ⚙️ How to Run Locally
+## ▶️ How to Run Locally
 
-### ⚡ Quick Start (Windows Only)
-If you are on Windows, you can bypass the manual steps below. Simply double-click the `start_dev.bat` file in the root directory, or run it via terminal:
+### ⚡ Quick Start (Windows)
+
+Run the launcher in the repo root:
+
 ```bash
 .\start_dev.bat
 ```
 
-> This script will automatically start the Docker database, the C# Orchestrator (with Hot Reload), the Python Engine, and the Streamlit Dashboard in separate terminal windows.
+This starts Docker, the C# API, the Python engine, and the Streamlit dashboard in separate terminals.
 
-## ⚙️ How to Run Locally (Manual Method)
+### 🧪 Manual Method
 
-### 1. Start the Database
-Ensure Docker is running, then start the PostgreSQL container from the root folder:
+1. **Start the database**
 
 ```bash
 docker-compose up -d
 ```
 
-### 2. Start the Python Analytical Engine
-Navigate to the MarketBrain folder, activate your virtual environment, and run:
+2. **Start the Python engine**
+
 ```bash
+cd MarketBrain
 uvicorn main:app --port 8000 --reload
 ```
 
-### 3. Start the Interactive Dashboard (Frontend)
-Navigate to the MarketDashboard folder, activate its virtual environment, and run:
+3. **Start the dashboard**
 
 ```bash
+cd MarketDashboard
 streamlit run app.py
 ```
 
-### 4. Start the C# API
-Navigate to the MarketDataApi folder. Apply the database migrations and run the server:
+4. **Start the C# API**
 
 ```bash
+cd MarketDataApi
 dotnet ef database update
 dotnet run
 ```
 
-### 5. Test the Endpoints
-- Open your browser or access the built-in Swagger UI: 
+## 🔌 Endpoints (examples)
+
+### C# API
+
 ```bash
 http://localhost:<YOUR_PORT>/swagger
-```
-
-- Crypto Analysis: 
-```bash
 http://localhost:<YOUR_PORT>/price/crypto/bitcoin/history
-```
-
-- B3 Stock Analysis: 
-```bash
 http://localhost:<YOUR_PORT>/price/stock/petr4/history
-```
-
-- B3 Fundamentals Data:
-```bash
 http://localhost:<YOUR_PORT>/fundamentals/stock/petr4
-```
-
-- Audit Logs:
-```bash
+http://localhost:<YOUR_PORT>/fundamentals/fii/mxrf11
 http://localhost:<YOUR_PORT>/logs
 ```
-(Retrieves the last 10 search records).
 
-> 🌴 Developed as a robust portfolio project to demonstrate backend engineering, microservices integration, web scraping, and polyglot architecture.
+### Python Engine (direct)
 
-### 📜 License
+```bash
+http://localhost:8000/fundamentals/stock/petr4
+http://localhost:8000/fundamentals/fii/mxrf11
+http://localhost:8000/fundamentals-debug/mxrf11?asset_type=fii
+```
 
-This project is distributed under the MIT License. See the [LICENSE](LICENSE) file for more information.
+## 📌 Notes on Fundamentals
+
+- `dividend_payout` can be derived when there is no explicit label using `REND. DISTRIBUÍDO / FFO`.
+- FII classification uses text signals and known overrides for ambiguous tickers.
+
+## ✨ Highlights
+
+- Polyglot microservices with clear separation between ingestion, analytics, and persistence.
+- FastAPI analytics engine with deterministic fundamentals parsing for B3 stocks and FIIs.
+- Streamlit dashboard with clean metrics, fallback logic, and multi-asset comparisons.
+- Dockerized PostgreSQL + EF Core for logging and audit trails.
+
+## 📜 License
+
+This project is distributed under the MIT License. See [LICENSE](LICENSE) for details.
