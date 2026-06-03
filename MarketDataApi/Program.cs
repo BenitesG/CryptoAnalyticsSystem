@@ -49,7 +49,8 @@ if (!Uri.TryCreate(marketBrainBaseUrl, UriKind.Absolute, out var marketBrainBase
 // Register Python Engine Service for Fundamentals
 builder.Services.AddHttpClient<MarketBrainService>(client =>
 {
-    client.BaseAddress = marketBrainBaseUri;
+    var baseUrl = builder.Configuration["MarketBrain:BaseUrl"] ?? "http://localhost:8000";
+    client.BaseAddress = new Uri(baseUrl); 
 })
 .AddTransientHttpErrorPolicy(policyBuilder => 
     policyBuilder.WaitAndRetryAsync(2, retryAttempt => TimeSpan.FromSeconds(1))

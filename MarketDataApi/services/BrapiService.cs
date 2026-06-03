@@ -93,7 +93,8 @@ namespace MarketDataApi.Services
                 try 
                 {
                     var jsonContent = new StringContent(JsonSerializer.Serialize(requestPython), System.Text.Encoding.UTF8, "application/json");
-                    using var pythonResponse = await _httpClient.PostAsync("http://localhost:8000/analyze", jsonContent);
+                    var brainUrl = _config["MarketBrain:BaseUrl"] ?? "http://localhost:8000";
+                    using var pythonResponse = await _httpClient.PostAsync($"{brainUrl}/analyze", jsonContent);
                     pythonResponse.EnsureSuccessStatusCode();
 
                     var pythonText = await pythonResponse.Content.ReadAsStringAsync();

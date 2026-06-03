@@ -10,14 +10,16 @@ namespace MarketDataApi.Services
         private readonly HttpClient _httpClient;
         private readonly IMemoryCache _cache;
         private readonly ILogger<CoinGeckoService> _logger;
+        private readonly IConfiguration _config;
 
-        public CoinGeckoService(HttpClient httpClient, IMemoryCache cache, ILogger<CoinGeckoService> logger)
+        public CoinGeckoService(HttpClient httpClient, IMemoryCache cache, ILogger<CoinGeckoService> logger, IConfiguration config)
         {
             _httpClient = httpClient;
             _cache = cache;
             _logger = logger;
+            _config = config; // Salva a config
             _httpClient.DefaultRequestHeaders.Add("User-Agent", "MarketDataApi");
-        }   
+        }
 
         public async Task<object?> GetHistoryAsync(string coin)
         {
@@ -68,7 +70,8 @@ namespace MarketDataApi.Services
                 HttpResponseMessage pythonResponse;
                 try
                 {
-                    pythonResponse = await _httpClient.PostAsync("http://localhost:8000/analyze", jsonContent);
+                    var brainUrl = _config["MarketBrain:BaseUrl"] ?? "http://localhost:8000";
+                    pythonResponse = await _httpClient.PostAsync($"{brainUrl}/analyze", jsonContent);
                     pythonResponse.EnsureSuccessStatusCode();
                 }
                 catch (Exception ex)
