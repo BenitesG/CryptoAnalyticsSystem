@@ -35,6 +35,7 @@ def fetch_fundamentals(asset_type: str, ticker: str):
         ) from exc
     except requests.RequestException as exc:
         raise FundamentalsFetchError(
+<<<<<<< Updated upstream
             "⚠️ Error connecting to the fundamentals service.",
         ) from exc
 
@@ -43,14 +44,29 @@ def fetch_fundamentals_with_fallback(ticker: str):
     
     if ticker.endswith("11"):
         # 1. Try as FII first
+=======
+            "⚠️ Error connecting to the fundamentals service. Please try again later.",
+        ) from exc
+
+def fetch_fundamentals_with_fallback(ticker: str):
+    
+    if ticker.endswith("11"):
+        # 1. Try FII first (MXRF11, HGLG11, etc)
+>>>>>>> Stashed changes
         try:
             status_code, data = fetch_fundamentals("fii", ticker)
             if data:
                 return "fii", data, None
         except FundamentalsFetchError:
+<<<<<<< Updated upstream
             pass # Ignore FII errors and try stock
             
         # 2. Fallback to stock (TAEE11, SANB11, etc)
+=======
+            pass # Ignore and fallback to stock if FII fetch fails (either 404 or connection error)
+            
+        # 2. Fallback to Stock (some tickers might be ambiguous, but we assume if it ends with 11 it's likely an FII)
+>>>>>>> Stashed changes
         try:
             status_code, data = fetch_fundamentals("stock", ticker)
             if data:
@@ -60,7 +76,10 @@ def fetch_fundamentals_with_fallback(ticker: str):
             return None, None, exc.status_code
             
     else:
+<<<<<<< Updated upstream
         # If it does not end with 11, it is a stock
+=======
+>>>>>>> Stashed changes
         try:
             status_code, data = fetch_fundamentals("stock", ticker)
             if data:
@@ -142,7 +161,7 @@ def _render_metric_rows(metrics: list[tuple[str, str]]):
 
 def render_fundamentals_ui(asset_type: str, data: dict):
     """Renders fundamentals grid - only shows non-empty/non-zero fields."""
-    st.markdown("##### 🏢 Indicadores Fundamentalistas")
+    st.markdown("##### 🏢 Fundamentals")
     
     if asset_type == "stock":
         sector = data.get('sector')
@@ -200,7 +219,7 @@ def render_fundamentals_ui(asset_type: str, data: dict):
         segment = data.get('segment', '')
         caption_text = f"**Tipo:** {fii_type_pt}"
         if segment:
-            caption_text = f"**Segmento:** {segment} | " + caption_text
+            caption_text = f"**Segment:** {segment} | " + caption_text
         st.caption(caption_text)
         
         # Common FII metrics

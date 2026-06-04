@@ -67,34 +67,35 @@ namespace MarketDataApi.Services
 
                 _logger.LogInformation("Calling Python analyze service for coin {Coin}.", coin);
 
-                HttpResponseMessage pythonResponse;
                 try
                 {
                     var brainUrl = _config["MarketBrain:BaseUrl"] ?? "http://localhost:8000";
-                    pythonResponse = await _httpClient.PostAsync($"{brainUrl}/analyze", jsonContent);
+                    
+                    // O 'using' aqui garante que a conexão será fechada e limpa da memória!
+                    using var pythonResponse = await _httpClient.PostAsync($"{brainUrl}/analyze", jsonContent);
                     pythonResponse.EnsureSuccessStatusCode();
+
+                    var pythonText = await pythonResponse.Content.ReadAsStringAsync();
+                    var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+
+                    var brainAnalysis = JsonSerializer.Deserialize<PythonAnalyzeResponse>(pythonText, options);
+
+                    return new {
+                        average = Math.Round(onlyPrice.Average(), 2),
+                        max = Math.Round(onlyPrice.Max(), 2),
+                        min = Math.Round(onlyPrice.Min(), 2),
+                        volatility = brainAnalysis?.Volatility,
+                        trend = brainAnalysis?.Trend,
+                        percentage_change = brainAnalysis?.PercentageChange,
+                        prices = brainAnalysis?.HistoricalPrices,
+                        action_signal = brainAnalysis?.ActionSignal,
+                    };
                 }
                 catch (Exception ex)
                 {
                     _logger.LogError(ex, "Failed to get analysis from Python service for coin {Coin}.", coin);
                     throw;
                 }
-
-                var pythonText = await pythonResponse.Content.ReadAsStringAsync();
-                var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-
-                var brainAnalysis = JsonSerializer.Deserialize<PythonAnalyzeResponse>(pythonText, options);
-
-                return new {
-                    average = Math.Round(onlyPrice.Average(), 2),
-                    max = Math.Round(onlyPrice.Max(), 2),
-                    min = Math.Round(onlyPrice.Min(), 2),
-                    volatility = brainAnalysis?.Volatility,
-                    trend = brainAnalysis?.Trend,
-                    percentage_change = brainAnalysis?.PercentageChange,
-                    prices = brainAnalysis?.HistoricalPrices,
-                    action_signal = brainAnalysis?.ActionSignal,
-                };
 
             });
 
