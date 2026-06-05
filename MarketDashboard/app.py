@@ -2,27 +2,26 @@ import streamlit as st
 import requests
 import pandas as pd
 import plotly.express as px
+import os
 
-# --- CONSTANTES DE API ---
-# Porta do C# (Preço e Histórico)
-API_CSHARP_URL = "http://localhost:5091"
-# Porta do C# (Fundamentos via proxy para o Python Engine)
-API_BRAIN_URL = "http://localhost:5091"
+# --- API CONSTANTS ---
+# Inside Docker it will use the environment variable. Locally, we keep the default.
+API_URL = os.getenv("API_URL", "http://localhost:5091")
 
-# --- FUNÇÕES DE FUNDAMENTOS ---
+# --- Fundamentals Functions ---
 class FundamentalsFetchError(RuntimeError):
     def __init__(self, message: str, status_code: int | None = None):
         super().__init__(message)
         self.status_code = status_code
 
-@st.cache_data(ttl=300) # Cache de 5 min para evitar bater no scraper atoa
+@st.cache_data(ttl=300)
 def _fetch_fundamentals_cached(asset_type: str, ticker: str):
-    response = requests.get(f"{API_BRAIN_URL}/fundamentals/{asset_type}/{ticker}", timeout=15)
+    response = requests.get(f"{API_URL}/fundamentals/{asset_type}/{ticker}", timeout=15)
     response.raise_for_status()
     return response.json()
 
 def fetch_fundamentals(asset_type: str, ticker: str):
-    """Busca fundamentos no endpoint de proxy da API C#."""
+    """Fetch fundamentals from the C# API proxy endpoint."""
     try:
         data = _fetch_fundamentals_cached(asset_type, ticker)
         return 200, data
@@ -31,27 +30,43 @@ def fetch_fundamentals(asset_type: str, ticker: str):
         if status_code == 404:
             return status_code, None
         raise FundamentalsFetchError(
-            "⚠️ Serviço de fundamentos indisponível no momento.",
+            "⚠️ Fundamental data not found for this asset.",
             status_code=status_code
         ) from exc
     except requests.RequestException as exc:
         raise FundamentalsFetchError(
-            "⚠️ Erro de conexão com o serviço de fundamentos.",
+<<<<<<< Updated upstream
+            "⚠️ Error connecting to the fundamentals service.",
         ) from exc
 
 def fetch_fundamentals_with_fallback(ticker: str):
-    """Heurística: Tenta FII se terminar em 11, senão Ação. Faz fallback em QUALQUER erro."""
+    """Heuristic: Try FII if it ends with 11, otherwise stock. Fall back on any error."""
     
     if ticker.endswith("11"):
-        # 1. Tenta como FII primeiro
+        # 1. Try as FII first
+=======
+            "⚠️ Error connecting to the fundamentals service. Please try again later.",
+        ) from exc
+
+def fetch_fundamentals_with_fallback(ticker: str):
+    
+    if ticker.endswith("11"):
+        # 1. Try FII first (MXRF11, HGLG11, etc)
+>>>>>>> Stashed changes
         try:
             status_code, data = fetch_fundamentals("fii", ticker)
             if data:
                 return "fii", data, None
         except FundamentalsFetchError:
-            pass # Ignora o erro de FII e segue para tentar como Ação
+<<<<<<< Updated upstream
+            pass # Ignore FII errors and try stock
             
-        # 2. Fallback para Ação (TAEE11, SANB11, etc)
+        # 2. Fallback to stock (TAEE11, SANB11, etc)
+=======
+            pass # Ignore and fallback to stock if FII fetch fails (either 404 or connection error)
+            
+        # 2. Fallback to Stock (some tickers might be ambiguous, but we assume if it ends with 11 it's likely an FII)
+>>>>>>> Stashed changes
         try:
             status_code, data = fetch_fundamentals("stock", ticker)
             if data:
@@ -61,7 +76,10 @@ def fetch_fundamentals_with_fallback(ticker: str):
             return None, None, exc.status_code
             
     else:
-        # Se não terminar com 11, é certeza que é Ação
+<<<<<<< Updated upstream
+        # If it does not end with 11, it is a stock
+=======
+>>>>>>> Stashed changes
         try:
             status_code, data = fetch_fundamentals("stock", ticker)
             if data:
@@ -143,7 +161,7 @@ def _render_metric_rows(metrics: list[tuple[str, str]]):
 
 def render_fundamentals_ui(asset_type: str, data: dict):
     """Renders fundamentals grid - only shows non-empty/non-zero fields."""
-    st.markdown("##### 🏢 Indicadores Fundamentalistas")
+    st.markdown("##### 🏢 Fundamentals")
     
     if asset_type == "stock":
         sector = data.get('sector')
@@ -201,10 +219,10 @@ def render_fundamentals_ui(asset_type: str, data: dict):
         segment = data.get('segment', '')
         caption_text = f"**Tipo:** {fii_type_pt}"
         if segment:
-            caption_text = f"**Segmento:** {segment} | " + caption_text
+            caption_text = f"**Segment:** {segment} | " + caption_text
         st.caption(caption_text)
         
-        # Common FII Metrics
+        # Common FII metrics
         common_metrics: list[tuple[str, str]] = []
         pvp = data.get("p_vp")
         if pvp is not None and pvp != 0:
@@ -218,7 +236,7 @@ def render_fundamentals_ui(asset_type: str, data: dict):
 
         _render_metric_rows(common_metrics)
         
-        # Specific Brick FII Metrics
+        # Specific brick FII metrics
         if "tijolo" in fii_type_raw:
             st.divider()
             brick_metrics: list[tuple[str, str]] = []
@@ -255,7 +273,7 @@ def render_fundamentals_ui(asset_type: str, data: dict):
                 st.divider()
                 _render_metric_rows(brick_metrics2)
             
-        # Specific Paper FII Metrics
+        # Specific paper FII metrics
         elif "papel" in fii_type_raw:
             st.divider()
             paper_metrics: list[tuple[str, str]] = []
@@ -299,7 +317,7 @@ def render_fundamentals_ui(asset_type: str, data: dict):
             st.divider()
             _render_metric_rows([(_labelize_key(key), _format_value(value, key)) for key, value in extras])
 
-# --- CONFIGURAÇÃO DA PÁGINA ---
+# --- PAGE CONFIGURATION ---
 st.set_page_config(page_title="Market Analytics", layout="wide")
 st.title("📊 Market Analytics Dashboard")
 st.markdown("Welcome to the Market Analytics Dashboard! Analyze and compare price trends of Cryptocurrencies and Stocks listed on B3.")
@@ -320,7 +338,7 @@ with st.sidebar:
     
     btn_search = st.button("🔍 Analyze Market")
 
-# --- LÓGICA PRINCIPAL ---
+# --- MAIN CONTENT ---
 if btn_search:
     raw_list = [x.strip() for x in assets_input.split(",") if x.strip()]
     asset_list = list(dict.fromkeys(raw_list)) 
@@ -335,7 +353,7 @@ if btn_search:
         st.subheader("📝 Analysis Summary")
 
         for asset in asset_list:
-            url_api_csharp = f"{API_CSHARP_URL}/price/{asset_type_url}/{asset}/history" 
+            url_api_csharp = f"{API_URL}/price/{asset_type_url}/{asset}/history" 
             
             try:
                 response = requests.get(url_api_csharp)
@@ -349,9 +367,9 @@ if btn_search:
                         current_price = historical_prices[-1]
                         fmt = "{:,.6f}" if analysis['average'] < 1 else "{:,.2f}"
                         
-                        # --- CARDS EXPANSÍVEIS ---
+                        # --- CARDS ---
                         with st.expander(f"🟢 {asset.upper()} | Current Price: ${fmt.format(current_price)}", expanded=True):
-                            # 1. LINHA DE PREÇOS (C# API)
+                            # 1. Prices (C# API)
                             col1, col2, col3, col4, col5 = st.columns(5)
                             col1.metric("Average Price", f"${fmt.format(analysis['average'])}")
                             col2.metric("7-Day High", f"${fmt.format(analysis['max'])}")
@@ -375,7 +393,7 @@ if btn_search:
                                 else:
                                     st.error("⚠️ Serviço de fundamentos indisponível no momento. Tente novamente mais tarde.")
 
-                        # Prepara DF para o Gráfico
+                        # DF For graphing - C# API provides the historical price data, so we can plot it even for cryptos
                         df_temp = pd.DataFrame({
                             "Timeline (Data Points)": range(len(historical_prices)),
                             "Price": historical_prices,
@@ -391,7 +409,7 @@ if btn_search:
             except Exception as e:
                 st.error(f"⚠️ Connection error for {asset.upper()}. Please check if the C# API is running! Details: {e}")
 
-        # --- GRÁFICO COMPARATIVO ---
+        # --- Comparative Price Curve ---
         if not df_master.empty:
             st.markdown("---") 
             st.subheader("📈 Comparative Price Curve")

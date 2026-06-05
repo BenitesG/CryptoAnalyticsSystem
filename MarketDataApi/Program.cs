@@ -40,16 +40,12 @@ builder.Services.AddHttpClient<BrapiService>()
         policyBuilder.WaitAndRetryAsync(3, retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)))
     );
 
-var marketBrainBaseUrl = builder.Configuration["MarketBrain:BaseUrl"];
-if (!Uri.TryCreate(marketBrainBaseUrl, UriKind.Absolute, out var marketBrainBaseUri))
-{
-    throw new InvalidOperationException("MarketBrain:BaseUrl must be configured with a valid absolute URL.");
-}
-
 // Register Python Engine Service for Fundamentals
+var marketBrainUrl = builder.Configuration["MarketBrain:BaseUrl"] ?? "http://localhost:8000";
+
 builder.Services.AddHttpClient<MarketBrainService>(client =>
 {
-    client.BaseAddress = marketBrainBaseUri;
+    client.BaseAddress = new Uri(marketBrainUrl); 
 })
 .AddTransientHttpErrorPolicy(policyBuilder => 
     policyBuilder.WaitAndRetryAsync(2, retryAttempt => TimeSpan.FromSeconds(1))

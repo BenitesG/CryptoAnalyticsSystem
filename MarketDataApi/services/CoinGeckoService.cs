@@ -10,14 +10,16 @@ namespace MarketDataApi.Services
         private readonly HttpClient _httpClient;
         private readonly IMemoryCache _cache;
         private readonly ILogger<CoinGeckoService> _logger;
+        private readonly IConfiguration _config;
 
-        public CoinGeckoService(HttpClient httpClient, IMemoryCache cache, ILogger<CoinGeckoService> logger)
+        public CoinGeckoService(HttpClient httpClient, IMemoryCache cache, ILogger<CoinGeckoService> logger, IConfiguration config)
         {
             _httpClient = httpClient;
             _cache = cache;
             _logger = logger;
+            _config = config; // Salva a config
             _httpClient.DefaultRequestHeaders.Add("User-Agent", "MarketDataApi");
-        }   
+        }
 
         public async Task<object?> GetHistoryAsync(string coin)
         {
@@ -65,33 +67,35 @@ namespace MarketDataApi.Services
 
                 _logger.LogInformation("Calling Python analyze service for coin {Coin}.", coin);
 
-                HttpResponseMessage pythonResponse;
                 try
                 {
-                    pythonResponse = await _httpClient.PostAsync("http://localhost:8000/analyze", jsonContent);
+                    var brainUrl = _config["MarketBrain:BaseUrl"] ?? "http://localhost:8000";
+                    
+                    // O 'using' aqui garante que a conexão será fechada e limpa da memória!
+                    using var pythonResponse = await _httpClient.PostAsync($"{brainUrl}/analyze", jsonContent);
                     pythonResponse.EnsureSuccessStatusCode();
+
+                    var pythonText = await pythonResponse.Content.ReadAsStringAsync();
+                    var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+
+                    var brainAnalysis = JsonSerializer.Deserialize<PythonAnalyzeResponse>(pythonText, options);
+
+                    return new {
+                        average = Math.Round(onlyPrice.Average(), 2),
+                        max = Math.Round(onlyPrice.Max(), 2),
+                        min = Math.Round(onlyPrice.Min(), 2),
+                        volatility = brainAnalysis?.Volatility,
+                        trend = brainAnalysis?.Trend,
+                        percentage_change = brainAnalysis?.PercentageChange,
+                        prices = brainAnalysis?.HistoricalPrices,
+                        action_signal = brainAnalysis?.ActionSignal,
+                    };
                 }
                 catch (Exception ex)
                 {
                     _logger.LogError(ex, "Failed to get analysis from Python service for coin {Coin}.", coin);
                     throw;
                 }
-
-                var pythonText = await pythonResponse.Content.ReadAsStringAsync();
-                var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-
-                var brainAnalysis = JsonSerializer.Deserialize<PythonAnalyzeResponse>(pythonText, options);
-
-                return new {
-                    average = Math.Round(onlyPrice.Average(), 2),
-                    max = Math.Round(onlyPrice.Max(), 2),
-                    min = Math.Round(onlyPrice.Min(), 2),
-                    volatility = brainAnalysis?.Volatility,
-                    trend = brainAnalysis?.Trend,
-                    percentage_change = brainAnalysis?.PercentageChange,
-                    prices = brainAnalysis?.HistoricalPrices,
-                    action_signal = brainAnalysis?.ActionSignal,
-                };
 
             });
 
