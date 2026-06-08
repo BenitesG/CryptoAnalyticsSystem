@@ -30,43 +30,27 @@ def fetch_fundamentals(asset_type: str, ticker: str):
         if status_code == 404:
             return status_code, None
         raise FundamentalsFetchError(
-            "⚠️ Fundamental data not found for this asset.",
+            "⚠️ Serviço de fundamentos indisponível no momento.",
             status_code=status_code
         ) from exc
     except requests.RequestException as exc:
         raise FundamentalsFetchError(
-<<<<<<< Updated upstream
-            "⚠️ Error connecting to the fundamentals service.",
+            "⚠️ Error connecting to the fundamentals service. Please try again later.",
         ) from exc
 
 def fetch_fundamentals_with_fallback(ticker: str):
     """Heuristic: Try FII if it ends with 11, otherwise stock. Fall back on any error."""
     
     if ticker.endswith("11"):
-        # 1. Try as FII first
-=======
-            "⚠️ Error connecting to the fundamentals service. Please try again later.",
-        ) from exc
-
-def fetch_fundamentals_with_fallback(ticker: str):
-    
-    if ticker.endswith("11"):
         # 1. Try FII first (MXRF11, HGLG11, etc)
->>>>>>> Stashed changes
         try:
             status_code, data = fetch_fundamentals("fii", ticker)
             if data:
                 return "fii", data, None
         except FundamentalsFetchError:
-<<<<<<< Updated upstream
-            pass # Ignore FII errors and try stock
-            
-        # 2. Fallback to stock (TAEE11, SANB11, etc)
-=======
             pass # Ignore and fallback to stock if FII fetch fails (either 404 or connection error)
             
-        # 2. Fallback to Stock (some tickers might be ambiguous, but we assume if it ends with 11 it's likely an FII)
->>>>>>> Stashed changes
+        # 2. Fallback to Stock (TAEE11, SANB11, etc)
         try:
             status_code, data = fetch_fundamentals("stock", ticker)
             if data:
@@ -76,10 +60,7 @@ def fetch_fundamentals_with_fallback(ticker: str):
             return None, None, exc.status_code
             
     else:
-<<<<<<< Updated upstream
         # If it does not end with 11, it is a stock
-=======
->>>>>>> Stashed changes
         try:
             status_code, data = fetch_fundamentals("stock", ticker)
             if data:
@@ -222,7 +203,7 @@ def render_fundamentals_ui(asset_type: str, data: dict):
             caption_text = f"**Segment:** {segment} | " + caption_text
         st.caption(caption_text)
         
-        # Common FII metrics
+        # Common FII Metrics
         common_metrics: list[tuple[str, str]] = []
         pvp = data.get("p_vp")
         if pvp is not None and pvp != 0:
@@ -236,7 +217,7 @@ def render_fundamentals_ui(asset_type: str, data: dict):
 
         _render_metric_rows(common_metrics)
         
-        # Specific brick FII metrics
+        # Specific Brick FII Metrics
         if "tijolo" in fii_type_raw:
             st.divider()
             brick_metrics: list[tuple[str, str]] = []
@@ -273,7 +254,7 @@ def render_fundamentals_ui(asset_type: str, data: dict):
                 st.divider()
                 _render_metric_rows(brick_metrics2)
             
-        # Specific paper FII metrics
+        # Specific Paper FII Metrics
         elif "papel" in fii_type_raw:
             st.divider()
             paper_metrics: list[tuple[str, str]] = []
@@ -382,7 +363,7 @@ if btn_search:
                             color_hex = "#00FFAA" if signal in ["BUY", "STRONG BUY"] else "#FF4B4B" if signal == "SELL" else "#808495"
                             col5.markdown(f"<div><p style='font-size: 14px; margin-bottom: 0px; color: #FAFAFA;'>Action Signal</p><h2 style='color: {color_hex}; margin-top: 0px; padding: 0px;'>{signal}</h2></div>", unsafe_allow_html=True)
 
-                            # 2. LINHA DE FUNDAMENTOS (Python API - Apenas B3)
+                            # 2. LINHA DE FUNDAMENTOS (C# Proxy -> Python API)
                             if market_type == "Stocks/REITs (B3)":
                                 st.divider()
                                 a_type, fund_data, fund_status = fetch_fundamentals_with_fallback(asset)
@@ -393,7 +374,7 @@ if btn_search:
                                 else:
                                     st.error("⚠️ Serviço de fundamentos indisponível no momento. Tente novamente mais tarde.")
 
-                        # DF For graphing - C# API provides the historical price data, so we can plot it even for cryptos
+                        # DF For graphing
                         df_temp = pd.DataFrame({
                             "Timeline (Data Points)": range(len(historical_prices)),
                             "Price": historical_prices,
