@@ -261,7 +261,7 @@ app.MapGet("/fundamentals/{assetType}/{symbol}", async (
         { "vacancy", existingRecord.Vacancy },
         { "properties_count", existingRecord.PropertiesCount },
         { "numero_cotistas", existingRecord.ShareholdersCount },
-        
+        { "last_updated_at", existingRecord.LastUpdatedAt },
         { "largest_tenant_pct", null },
         { "avg_contract_term", null },
         { "contract_type", null },
