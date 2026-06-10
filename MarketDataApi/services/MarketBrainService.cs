@@ -26,7 +26,6 @@ namespace MarketDataApi.Services
 
             return await _cache.GetOrCreateAsync(cacheKey, async (cacheOptions) =>
             {
-                // Fundamentos mudam raramente. Cache longo de 10 minutos!
                 cacheOptions.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10);
 
                 _logger.LogInformation("Cache miss for {CacheKey}. Fetching fundamentals from Python Engine.", cacheKey);
@@ -41,7 +40,6 @@ namespace MarketDataApi.Services
 
                 response.EnsureSuccessStatusCode();
 
-                // JsonObject permite retornar os dados de forma dinâmica (Tijolo, Papel ou Ação) sem quebrar o C#
                 return await response.Content.ReadFromJsonAsync<JsonObject>();
             });
         }
