@@ -80,9 +80,20 @@ namespace MarketDataApi.Services
                 if (data?.Results == null || data.Results.Count == 0) return null;
 
                 var history = data.Results[0].HistoricalDataPrice;
-                if (history == null || history.Count == 0) return null;
+                List<decimal> onlyPrice;
 
-                var onlyPrice = history.Select(h => h.Close).ToList();
+                if (history == null || history.Count < 2)
+                {
+                    _logger.LogWarning("Historical data empty or insufficient from Brapi for {Ticker}. Applying flat-line fallback.", normalizedTicker);
+                    
+                    var currentPrice = data.Results[0].RegularMarketPrice;
+                    
+                    onlyPrice = Enumerable.Repeat(currentPrice, 5).ToList();
+                }
+                else
+                {
+                    onlyPrice = history.Select(h => h.Close).ToList();
+                }
 
                 var requestPython = new PythonAnalyzeRequest
                 {
@@ -105,12 +116,13 @@ namespace MarketDataApi.Services
                         max = Math.Round(onlyPrice.Max(), 2),
                         min = Math.Round(onlyPrice.Min(), 2),
                         volatility = analysisResult?.Volatility,
-                        trend = analysisResult?.Trend,                 
+                        trend = analysisResult?.Trend ?? "STABLE",                 
                         percentage_change = analysisResult?.PercentageChange,
-                        prices = analysisResult?.HistoricalPrices,
-                        action_signal = analysisResult?.ActionSignal,
+                        prices = onlyPrice,
+                        action_signal = analysisResult?.ActionSignal ?? "HOLD",
                     };
                 }
+
                 catch (Exception ex)
                 {
                     _logger.LogError(ex, "Analytical Engine (Python) failed for {Ticker}", normalizedTicker);

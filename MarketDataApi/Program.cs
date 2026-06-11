@@ -6,7 +6,6 @@ using Polly;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.AspNetCore.Mvc;
 
-// See https://aka.ms/new-console-template for more information
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddMemoryCache();
 builder.Services.AddRateLimiter(options =>
@@ -174,36 +173,109 @@ app.MapGet("/logs", async (AppDbContext db) =>
 app.MapGet("/fundamentals/{assetType}/{symbol}", async (
     string assetType, 
     string symbol, 
-    MarketBrainService brainService) => 
+    MarketBrainService brainService,
+    AppDbContext db) => 
 {
     var normalizedType = assetType.ToLowerInvariant();
+    var normalizedSymbol = symbol.ToUpperInvariant();
     
-    // Validar se não enviaram "crypto" para os fundamentos
     if (normalizedType != "stock" && normalizedType != "fii")
     {
-        return Results.BadRequest(new
-        {
-            message = $"Unsupported asset type '{assetType}' for fundamentals. Supported values are: 'stock', 'fii'."
-        });
+        return Results.BadRequest(new { message = $"Unsupported asset type '{assetType}'. Supported values are: 'stock', 'fii'." });
     }
 
-    var fundamentals = await brainService.GetFundamentalsAsync(normalizedType, symbol);
+    var existingRecord = await db.Fundamentals.FirstOrDefaultAsync(f => f.Ticker == normalizedSymbol);
 
-    if (fundamentals == null)
+    if (existingRecord != null && existingRecord.LastUpdatedAt > DateTime.UtcNow.AddHours(-24))
     {
-        return Results.NotFound(new 
-        { 
-            message = $"Fundamentals for asset '{symbol.ToUpperInvariant()}' not found.",
-            suggestion = "Asset might not exist or the data provider is unavailable."
-        });
+        return Results.Ok(existingRecord);
     }
 
-    return Results.Ok(fundamentals);
+    var fundamentalsJson = await brainService.GetFundamentalsAsync(normalizedType, normalizedSymbol);
+
+    if (fundamentalsJson == null)
+    {
+        if (existingRecord != null) return Results.Ok(existingRecord);
+
+        return Results.NotFound(new { message = $"Fundamentals for asset '{normalizedSymbol}' not found." });
+    }
+
+    decimal? ParseDecimal(string key)
+    {
+        var node = fundamentalsJson[key];
+        return node == null ? null : decimal.TryParse(node.ToString(), System.Globalization.CultureInfo.InvariantCulture, out var result) ? result : null;
+    }
+
+    int? ParseInt(string key)
+    {
+        var node = fundamentalsJson[key];
+        return node == null ? null : int.TryParse(node.ToString(), out var result) ? result : null;
+    }
+
+    string? ParseString(string key) => fundamentalsJson[key]?.ToString();
+
+    bool isNewRecord = false;
+    if (existingRecord == null)
+    {
+        existingRecord = new FundamentalRecord { Ticker = normalizedSymbol };
+        isNewRecord = true;
+    }
+
+    existingRecord.AssetType = normalizedType;
+    existingRecord.SectorOrSegment = ParseString(normalizedType == "stock" ? "sector" : "segment");
+    existingRecord.PriceToEarnings = ParseDecimal("p_l");
+    existingRecord.PriceToBook = ParseDecimal("p_vp");
+    existingRecord.DividendYield = ParseDecimal("dy");
+    existingRecord.Roe = ParseDecimal("roe");
+    existingRecord.NetMargin = ParseDecimal("net_margin");
+    existingRecord.DebtToEbitda = ParseDecimal("debt_ebitda");
+    existingRecord.Cagr5y = ParseDecimal("cagr_5y");
+    
+    existingRecord.FiiType = ParseString("tipo_fii");
+    existingRecord.Vacancy = ParseDecimal("vacancy");
+    existingRecord.PropertiesCount = ParseInt("properties_count");
+    existingRecord.ShareholdersCount = ParseDecimal("numero_cotistas");
+    
+    existingRecord.LastUpdatedAt = DateTime.UtcNow;
+
+    if (isNewRecord)
+        db.Fundamentals.Add(existingRecord);
+    else
+        db.Fundamentals.Update(existingRecord);
+
+    await db.SaveChangesAsync();
+
+        var responsePayload = new Dictionary<string, object?>
+    {
+        { "ticker", existingRecord.Ticker },
+        { "sector", existingRecord.AssetType == "stock" ? existingRecord.SectorOrSegment : null },
+        { "segment", existingRecord.AssetType == "fii" ? existingRecord.SectorOrSegment : null },
+        { "p_l", existingRecord.PriceToEarnings },
+        { "p_vp", existingRecord.PriceToBook },
+        { "dy", existingRecord.DividendYield },
+        { "roe", existingRecord.Roe },
+        { "net_margin", existingRecord.NetMargin },
+        { "debt_ebitda", existingRecord.DebtToEbitda },
+        { "cagr_5y", existingRecord.Cagr5y },
+        { "tipo_fii", existingRecord.FiiType },
+        { "vacancy", existingRecord.Vacancy },
+        { "properties_count", existingRecord.PropertiesCount },
+        { "numero_cotistas", existingRecord.ShareholdersCount },
+        { "last_updated_at", existingRecord.LastUpdatedAt },
+        { "largest_tenant_pct", null },
+        { "avg_contract_term", null },
+        { "contract_type", null },
+        { "inadimplencia", null },
+        { "%_cdi_ipca", null },
+        { "cri_ratings", null },
+        { "cash_available", null }
+    };
+
+    return Results.Ok(responsePayload);
 })
-.RequireRateLimiting("MarketPolicy"); // Mantendo a segurança da sua API
+.RequireRateLimiting("MarketPolicy");
 
 app.Run();
-
 
 // Expose the Program class to the Test Project
 public partial class Program { }

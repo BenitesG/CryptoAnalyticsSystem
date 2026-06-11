@@ -18,9 +18,10 @@ Thumbs.db
 # Docker secrets
 .env
 
-# Ignorar configurações sensíveis
+# Sensitive configuration files
 appsettings.json
 appsettings.Development.json
 
-# Dados exportados pelo Python
+# Logs
+logs/
 *.csv

@@ -71,7 +71,6 @@ namespace MarketDataApi.Services
                 {
                     var brainUrl = _config["MarketBrain:BaseUrl"] ?? "http://localhost:8000";
                     
-                    // O 'using' aqui garante que a conexão será fechada e limpa da memória!
                     using var pythonResponse = await _httpClient.PostAsync($"{brainUrl}/analyze", jsonContent);
                     pythonResponse.EnsureSuccessStatusCode();
 
