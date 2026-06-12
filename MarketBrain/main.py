@@ -174,6 +174,11 @@ def build_fundamentals_payload(asset_type: str, ticker: str, raw_data: dict[str,
         result["cagr_5y"] = parse_brazilian_number(
             get_first_value(raw_data, ["CRES. LUCRO (5A)", "CRES. REC (5A)"], "")
         )
+        result["market_cap"] = parse_brazilian_number(raw_data.get("VALOR DE MERCADO", ""))
+        result["ev_ebit"] = parse_brazilian_number(raw_data.get("EV / EBIT", ""))
+        result["ev_ebitda"] = parse_brazilian_number(raw_data.get("EV / EBITDA", ""))
+        result["cagr_revenue"] = parse_brazilian_number(raw_data.get("CRES. REC (5A)", ""))
+        result["cagr_profit"] = None
         return result
 
     tipo_fii = classify_fii_type(ticker, raw_data)
@@ -216,9 +221,9 @@ def build_fundamentals_payload(asset_type: str, ticker: str, raw_data: dict[str,
     result["cash_available"] = parse_brazilian_number(
         get_first_value(raw_data, ["CAIXA DISPONÍVEL", "CAIXA", "DISPONIBILIDADES"], "")
     )
-    result["dividend_payout"] = parse_brazilian_number(
-        get_first_value(raw_data, ["DIVIDEND PAYOUT", "PAYOUT", "PAYOUT DE DIVIDENDOS"], "")
-    )
+    result["liquidity"] = parse_brazilian_number(raw_data.get("VOL $ MÉD (2M)", ""))
+    result["net_worth"] = parse_brazilian_number(raw_data.get("PATRIMÔNIO LÍQ", "") or raw_data.get("PATRIM. LÍQ", ""))
+    result["last_dividend"] = parse_brazilian_number(raw_data.get("ÚLTIMO RENDIMENTO", ""))
 
     # For many FIIs, payout is not explicit but can be derived from distributed yield over FFO.
     if result["dividend_payout"] is None:
