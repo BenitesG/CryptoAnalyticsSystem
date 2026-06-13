@@ -5,7 +5,6 @@ import plotly.express as px
 import os
 
 # --- API CONSTANTS ---
-# Inside Docker it will use the environment variable. Locally, we keep the default.
 API_URL = os.getenv("API_URL", "http://localhost:5091")
 
 # --- Fundamentals Functions ---
@@ -40,17 +39,14 @@ def fetch_fundamentals(asset_type: str, ticker: str):
 
 def fetch_fundamentals_with_fallback(ticker: str):
     """Heuristic: Try FII if it ends with 11, otherwise stock. Fall back on any error."""
-    
     if ticker.endswith("11"):
-        # 1. Try FII first (MXRF11, HGLG11, etc)
         try:
             status_code, data = fetch_fundamentals("fii", ticker)
             if data:
                 return "fii", data, None
         except FundamentalsFetchError:
-            pass # Ignore and fallback to stock if FII fetch fails (either 404 or connection error)
+            pass
             
-        # 2. Fallback to Stock (TAEE11, SANB11, etc)
         try:
             status_code, data = fetch_fundamentals("stock", ticker)
             if data:
@@ -58,9 +54,7 @@ def fetch_fundamentals_with_fallback(ticker: str):
             return None, None, status_code
         except FundamentalsFetchError as exc:
             return None, None, exc.status_code
-            
     else:
-        # If it does not end with 11, it is a stock
         try:
             status_code, data = fetch_fundamentals("stock", ticker)
             if data:
@@ -72,37 +66,23 @@ def fetch_fundamentals_with_fallback(ticker: str):
 
 def _labelize_key(key: str) -> str:
     label_map = {
-        "p_l": "P/E Ratio",
-        "p_vp": "P/B Ratio",
+        "p_l": "P/L",
+        "p_vp": "P/VP",
         "dy": "Dividend Yield",
         "roe": "ROE",
-        "debt_ebitda": "Net Debt/EBITDA",
-        "cagr_5y": "5Y Profit CAGR",
-        "net_margin": "Net Margin",
-        "last_updated_at": "Last Updated",
-        "liquidez_media_diaria": "Avg Daily Liquidity",
-        "valor_patrimonial_cota": "Book Value per Share",
-        "patrimonio_liquido": "Net Worth",
-        "numero_cotistas": "Shareholders",
-        "ultimo_rendimento": "Last Yield",
-        "data_pagamento": "Payment Date",
-        "vacancy": "Vacancy",
-        "properties_count": "Properties Count",
-        "tenants_count": "Tenants Count",
-        "tenant_count": "Tenants Count",
-        "largest_tenant_pct": "Largest Tenant (%)",
-        "avg_contract_term": "Avg Contract Term",
-        "contract_type": "Contract Type",
-        "inadimplencia": "Default Rate",
-        "%_cdi_ipca": "CDI/IPCA Indexer",
-        "cri_ratings": "CRI Rating",
-        "cash_available": "Available Cash",
-        "tipo_fii": "REIT Type",
-        "segment": "Segment",
-        "sector": "Sector",
-        "localizacao": "Location",
-        "qualidade_imoveis": "Properties Quality",
-        "qualidade_cris": "CRIs Quality",
+        "debt_ebitda": "Dív. Líquida / Patrimônio",
+        "cagr_5y": "CAGR Lucro (5A)",
+        "net_margin": "Margem Líquida",
+        "market_cap": "Valor de Mercado",
+        "ev_ebit": "EV / EBIT",
+        "ev_ebitda": "EV / EBITDA",
+        "cagr_revenue": "CAGR Receita (5A)",
+        "liquidity": "Liquidez Média Diária",
+        "net_worth": "Patrimônio Líquido",
+        "last_dividend": "Último Rendimento",
+        "vacancy": "Vacância Física",
+        "properties_count": "Qtd. Imóveis",
+        "numero_cotistas": "Número de Cotistas"
     }
     return label_map.get(key, key.replace("_", " ").title())
 
@@ -117,187 +97,127 @@ def _is_meaningful(value) -> bool:
     return True
 
 
+def _format_large_number(value) -> str:
+    """Formats large financial numbers into readable Millions (M) or Billions (B)."""
+    if value is None: return "N/A"
+    try:
+        val = float(value)
+        if val >= 1_000_000_000:
+            return f"R$ {val / 1_000_000_000:.2f}B"
+        if val >= 1_000_000:
+            return f"R$ {val / 1_000_000:.2f}M"
+        return f"R$ {val:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+    except ValueError:
+        return str(value)
+
+
 def _format_value(value, key: str | None = None) -> str:
     if value is None:
         return ""
-    if key in {"dy", "roe", "net_margin", "vacancy", "largest_tenant_pct", "inadimplencia", "dividend_payout", "cagr_5y"}:
+    if key in {"market_cap", "net_worth", "liquidity"}:
+        return _format_large_number(value)
+    if key in {"dy", "roe", "net_margin", "vacancy", "cagr_revenue", "cagr_5y"}:
         if isinstance(value, (int, float)):
             return f"{value:.2f}%"
-    if key in {"properties_count", "tenant_count", "tenants_count"}:
+    if key in {"properties_count", "numero_cotistas"}:
         if isinstance(value, (int, float)):
-            return f"{value:.0f}"
+            return f"{value:,.0f}".replace(",", ".")
+    if key == "last_dividend":
+        return f"R$ {value:.2f}"
     if isinstance(value, float):
         return f"{value:.2f}"
     if isinstance(value, int):
-        return f"{value:,}"
+        return f"{value:,.0f}".replace(",", ".")
     return str(value)
 
 
 def _render_metric_rows(metrics: list[tuple[str, str]]):
     if not metrics:
         return
-    cols = st.columns(min(3, len(metrics)))
+    cols = st.columns(len(metrics))
     for idx, (label, value) in enumerate(metrics):
-        with cols[idx % len(cols)]:
+        with cols[idx]:
             st.metric(label, value)
 
 def render_fundamentals_ui(asset_type: str, data: dict):
     """Renders fundamentals grid - only shows non-empty/non-zero fields."""
-    st.markdown("##### 🏢 Fundamentals")
+    st.markdown("##### 🏢 Indicadores Fundamentalistas")
     
     if asset_type == "stock":
         sector = data.get('sector')
         if sector:
-            st.caption(f"**Sector:** {sector}")
+            st.caption(f"**Setor:** {sector}")
         
-        metrics: list[tuple[str, str]] = []
-        p_l = data.get("p_l")
-        if p_l is not None and p_l != 0:
-            metrics.append(("P/E Ratio", _format_value(p_l, "p_l")))
-        p_vp = data.get("p_vp")
-        if p_vp is not None and p_vp != 0:
-            metrics.append(("P/B Ratio", _format_value(p_vp, "p_vp")))
-        dy = data.get('dy')
-        if dy is not None and dy > 0:
-            metrics.append(("Dividend Yield", _format_value(dy, "dy")))
-        roe = data.get("roe")
-        if roe is not None and roe != 0:
-            metrics.append(("ROE", _format_value(roe, "roe")))
-        debt_ebitda = data.get("debt_ebitda")
-        if debt_ebitda is not None and debt_ebitda != 0:
-            metrics.append(("Net Debt/EBITDA", _format_value(debt_ebitda, "debt_ebitda")))
-        cagr = data.get('cagr_5y')
-        if cagr is not None and cagr != 0:
-            metrics.append(("5Y Profit CAGR", _format_value(cagr, "cagr_5y")))
-        net_margin = data.get("net_margin")
-        if net_margin is not None and net_margin != 0:
-            metrics.append(("Net Margin", _format_value(net_margin, "net_margin")))
+        # Section 1: Valuation Metrics
+        val_metrics = []
+        for k in ["p_l", "p_vp", "ev_ebit", "ev_ebitda", "market_cap"]:
+            if val := data.get(k):
+                val_metrics.append((_labelize_key(k), _format_value(val, k)))
         
-        _render_metric_rows(metrics)
-
-        displayed_keys = {"sector", "p_l", "p_vp", "dy", "roe", "debt_ebitda", "cagr_5y", "net_margin"}
-        stock_priority = [
-            "liquidez_media_diaria", "valor_patrimonial_cota", "patrimonio_liquido",
-            "numero_cotistas", "ultimo_rendimento", "data_pagamento"
-        ]
-        extras = [
-            (k, v)
-            for k in stock_priority
-            if k in data and _is_meaningful(data.get(k))
-            for v in [data.get(k)]
-        ] + [
-            (k, v)
-            for k, v in data.items()
-            if k not in displayed_keys and k != "ticker" and k not in stock_priority and _is_meaningful(v)
-        ]
-        if extras:
+        if val_metrics:
+            st.markdown("<p style='font-size:13px; color:#808495; margin-bottom:2px;'>VALUATION</p>", unsafe_allow_html=True)
+            _render_metric_rows(val_metrics)
             st.divider()
-            _render_metric_rows([(_labelize_key(key), _format_value(value, key)) for key, value in extras])
+
+        # Section 2: Profitability & Margins
+        prof_metrics = []
+        for k in ["dy", "roe", "net_margin"]:
+            if val := data.get(k):
+                prof_metrics.append((_labelize_key(k), _format_value(val, k)))
+        
+        if prof_metrics:
+            st.markdown("<p style='font-size:13px; color:#808495; margin-bottom:2px;'>RENTABILIDADE E MARGENS</p>", unsafe_allow_html=True)
+            _render_metric_rows(prof_metrics)
+            st.divider()
+
+        # Section 3: Debt & Growth
+        debt_metrics = []
+        for k in ["debt_ebitda", "cagr_revenue"]:
+            if val := data.get(k):
+                debt_metrics.append((_labelize_key(k), _format_value(val, k)))
+        
+        if debt_metrics:
+            st.markdown("<p style='font-size:13px; color:#808495; margin-bottom:2px;'>ENDIVIDAMENTO E CRESCIMENTO</p>", unsafe_allow_html=True)
+            _render_metric_rows(debt_metrics)
         
     elif asset_type == "fii":
         fii_type_raw = data.get('tipo_fii', 'N/A').lower()
-        fii_type_pt = "Brick" if "tijolo" in fii_type_raw else "Paper" if "papel" in fii_type_raw else "FOF" if "fof" in fii_type_raw else "Hybrid"
+        fii_type_pt = "Tijolo" if "tijolo" in fii_type_raw else "Papel" if "papel" in fii_type_raw else "FOF (Fundo de Fundos)" if "fof" in fii_type_raw else "Híbrido"
         
         segment = data.get('segment', '')
-        caption_text = f"**Type:** {fii_type_pt}"
+        caption_text = f"**Tipo:** {fii_type_pt}"
         if segment:
-            caption_text = f"**Segment:** {segment} | " + caption_text
+            caption_text = f"**Segmento:** {segment} | " + caption_text
         st.caption(caption_text)
         
-        # Common FII Metrics
-        common_metrics: list[tuple[str, str]] = []
-        pvp = data.get("p_vp")
-        if pvp is not None and pvp != 0:
-            common_metrics.append(("P/B Ratio", _format_value(pvp, "p_vp")))
-        dy = data.get('dy')
-        if dy is not None and dy > 0:
-            common_metrics.append(("Dividend Yield", _format_value(dy, "dy")))
-        payout = data.get("dividend_payout")
-        if payout is not None and payout > 0:
-            common_metrics.append(("Dividend Payout", _format_value(payout, "dividend_payout")))
-
-        _render_metric_rows(common_metrics)
+        # Row 1: Price and Dividends
+        row1 = []
+        for k in ["p_vp", "dy", "last_dividend"]:
+            if val := data.get(k):
+                row1.append((_labelize_key(k), _format_value(val, k)))
+        if row1:
+            _render_metric_rows(row1)
+            st.divider()
         
-        # Specific Brick FII Metrics
+        # Row 2: Liquidity and Size
+        row2 = []
+        for k in ["liquidity", "net_worth", "numero_cotistas"]:
+            if val := data.get(k):
+                row2.append((_labelize_key(k), _format_value(val, k)))
+        if row2:
+            st.markdown("<p style='font-size:13px; color:#808495; margin-bottom:2px;'>LIQUIDEZ E TAMANHO</p>", unsafe_allow_html=True)
+            _render_metric_rows(row2)
+
+        # Row 3: Physical Properties (Brick FIIs only)
         if "tijolo" in fii_type_raw:
             st.divider()
-            brick_metrics: list[tuple[str, str]] = []
-            vacancy = data.get('vacancy')
-            if vacancy is not None and vacancy > 0:
-                brick_metrics.append(("Vacancy", _format_value(vacancy, "vacancy")))
-            properties_count = data.get("properties_count")
-            if properties_count is not None and properties_count > 0:
-                brick_metrics.append(("Properties Count", _format_value(properties_count, "properties_count")))
-            tenant_count = data.get("tenant_count")
-            if tenant_count is not None and tenant_count > 0:
-                brick_metrics.append(("Tenants Count", _format_value(tenant_count, "tenant_count")))
-            largest = data.get('largest_tenant_pct')
-            if largest is not None and largest > 0:
-                brick_metrics.append(("Largest Tenant Concentration", _format_value(largest, "largest_tenant_pct")))
-            term = data.get("avg_contract_term")
-            if term:
-                brick_metrics.append(("Contract Term", _format_value(term, "avg_contract_term")))
-            contract_type = data.get("contract_type")
-            if contract_type:
-                brick_metrics.append(("Contract Type", _format_value(contract_type, "contract_type")))
-            
-            _render_metric_rows(brick_metrics)
-
-            brick_metrics2: list[tuple[str, str]] = []
-            localizacao = data.get("localizacao")
-            if localizacao:
-                brick_metrics2.append(("Location", localizacao))
-            qualidade_imoveis = data.get("qualidade_imoveis")
-            if qualidade_imoveis:
-                brick_metrics2.append(("Properties Quality", qualidade_imoveis))
-            
-            if brick_metrics2:
-                st.divider()
-                _render_metric_rows(brick_metrics2)
-            
-        # Specific Paper FII Metrics
-        elif "papel" in fii_type_raw:
-            st.divider()
-            paper_metrics: list[tuple[str, str]] = []
-            cdi = data.get("%_cdi_ipca")
-            if cdi:
-                paper_metrics.append(("Indexer", _format_value(cdi, "%_cdi_ipca")))
-            inad = data.get('inadimplencia')
-            if inad is not None and inad > 0:
-                paper_metrics.append(("Default Rate", _format_value(inad, "inadimplencia")))
-            qualidade_cris = data.get("qualidade_cris")
-            if qualidade_cris:
-                paper_metrics.append(("CRIs Quality", qualidade_cris))
-            cri_ratings = data.get("cri_ratings")
-            if cri_ratings and not qualidade_cris:
-                paper_metrics.append(("CRIs Quality", cri_ratings))
-            cash_available = data.get("cash_available")
-            if cash_available is not None and cash_available > 0:
-                paper_metrics.append(("Available Cash", _format_value(cash_available, "cash_available")))
-            
-            _render_metric_rows(paper_metrics)
-
-        displayed_keys = {
-            "tipo_fii", "segment", "p_vp", "dy", "vacancy", "largest_tenant_pct", "avg_contract_term",
-            "localizacao", "qualidade_imoveis", "%_cdi_ipca", "inadimplencia", "qualidade_cris", "cri_ratings",
-            "dividend_payout", "properties_count"
-        }
-        fii_priority = [
-            "numero_cotistas", "tenant_count", "tenants_count", "contract_type", "cash_available"
-        ]
-        extras = [
-            (k, v)
-            for k in fii_priority
-            if k in data and _is_meaningful(data.get(k)) and k not in displayed_keys
-            for v in [data.get(k)]
-        ] + [
-            (k, v)
-            for k, v in data.items()
-            if k not in displayed_keys and k != "ticker" and k not in fii_priority and _is_meaningful(v)
-        ]
-        if extras:
-            st.divider()
-            _render_metric_rows([(_labelize_key(key), _format_value(value, key)) for key, value in extras])
+            row3 = []
+            for k in ["vacancy", "properties_count"]:
+                if val := data.get(k):
+                    row3.append((_labelize_key(k), _format_value(val, k)))
+            if row3:
+                st.markdown("<p style='font-size:13px; color:#808495; margin-bottom:2px;'>PORTFÓLIO FÍSICO</p>", unsafe_allow_html=True)
+                _render_metric_rows(row3)
 
 # --- PAGE CONFIGURATION ---
 st.set_page_config(page_title="Market Analytics", layout="wide")
@@ -370,6 +290,17 @@ if btn_search:
                             a_type, fund_data, fund_status = fetch_fundamentals_with_fallback(asset)
                             if fund_data and a_type:
                                 render_fundamentals_ui(a_type, fund_data)
+                                
+                                # Render C# Database Cache Timestamp
+                                last_updated = fund_data.get("last_updated_at")
+                                if last_updated:
+                                    try:
+                                        dt = pd.to_datetime(last_updated)
+                                        formatted_date = dt.strftime("%d/%m/%Y at %H:%M:%S")
+                                        st.caption(f"🕒 Database Cache Updated: {formatted_date} (UTC)")
+                                    except Exception:
+                                        pass
+                                        
                             elif fund_status == 404:
                                 st.warning("⚠️ Fundamental data not found for this asset.")
                             else:
