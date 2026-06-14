@@ -179,27 +179,68 @@ app.MapGet("/fundamentals/{assetType}/{symbol}", async (
     var normalizedType = assetType.ToLowerInvariant();
     var normalizedSymbol = symbol.ToUpperInvariant();
     
+    // 1. Route validation
     if (normalizedType != "stock" && normalizedType != "fii")
     {
         return Results.BadRequest(new { message = $"Unsupported asset type '{assetType}'. Supported values are: 'stock', 'fii'." });
     }
 
+    // 2. Try fetching from Database Cache first
     var existingRecord = await db.Fundamentals.FirstOrDefaultAsync(f => f.Ticker == normalizedSymbol);
 
+    // If cache is fresh (less than 24 hours), return the mapped snake_case JSON
     if (existingRecord != null && existingRecord.LastUpdatedAt > DateTime.UtcNow.AddHours(-24))
     {
-        return Results.Ok(existingRecord);
+        var cachedPayload = new Dictionary<string, object?>
+        {
+            { "ticker", existingRecord.Ticker },
+            { "sector", existingRecord.AssetType == "stock" ? existingRecord.SectorOrSegment : null },
+            { "segment", existingRecord.AssetType == "fii" ? existingRecord.SectorOrSegment : null },
+            { "p_l", existingRecord.PriceToEarnings },
+            { "p_vp", existingRecord.PriceToBook },
+            { "dy", existingRecord.DividendYield },
+            { "roe", existingRecord.Roe },
+            { "net_margin", existingRecord.NetMargin },
+            { "debt_ebitda", existingRecord.DebtToEbitda },
+            
+            // New cached fields
+            { "market_cap", existingRecord.MarketCap },
+            { "ev_ebit", existingRecord.EvEbit },
+            { "ev_ebitda", existingRecord.EvEbitda },
+            { "cagr_revenue", existingRecord.RevenueCagr5y },
+            { "cagr_profit", existingRecord.ProfitCagr5y },
+            { "tipo_fii", existingRecord.FiiType },
+            { "vacancy", existingRecord.Vacancy },
+            { "properties_count", existingRecord.PropertiesCount },
+            { "numero_cotistas", existingRecord.ShareholdersCount },
+            { "liquidity", existingRecord.DailyLiquidity },
+            { "net_worth", existingRecord.NetWorth },
+            { "last_dividend", existingRecord.LastDividend },
+            { "last_updated_at", existingRecord.LastUpdatedAt },
+            
+            // Placeholders for visual consistency on frontend
+            { "largest_tenant_pct", null },
+            { "avg_contract_term", null },
+            { "contract_type", null },
+            { "inadimplencia", null },
+            { "%_cdi_ipca", null },
+            { "cri_ratings", null },
+            { "cash_available", null }
+        };
+        return Results.Ok(cachedPayload);
     }
 
+    // 3. Cache Miss: Fetch fresh data from Python Engine
     var fundamentalsJson = await brainService.GetFundamentalsAsync(normalizedType, normalizedSymbol);
 
     if (fundamentalsJson == null)
     {
+        // Resiliency Fallback: Return stale DB data if Python is down
         if (existingRecord != null) return Results.Ok(existingRecord);
-
         return Results.NotFound(new { message = $"Fundamentals for asset '{normalizedSymbol}' not found." });
     }
 
+    // Helpers to safely parse JSON into SQL-compatible types
     decimal? ParseDecimal(string key)
     {
         var node = fundamentalsJson[key];
@@ -214,6 +255,7 @@ app.MapGet("/fundamentals/{assetType}/{symbol}", async (
 
     string? ParseString(string key) => fundamentalsJson[key]?.ToString();
 
+    // 4. UPSERT (Update or Insert) mapping
     bool isNewRecord = false;
     if (existingRecord == null)
     {
@@ -229,15 +271,27 @@ app.MapGet("/fundamentals/{assetType}/{symbol}", async (
     existingRecord.Roe = ParseDecimal("roe");
     existingRecord.NetMargin = ParseDecimal("net_margin");
     existingRecord.DebtToEbitda = ParseDecimal("debt_ebitda");
-    existingRecord.Cagr5y = ParseDecimal("cagr_5y");
     
+    // Map New Stock Fields
+    existingRecord.MarketCap = ParseDecimal("market_cap");
+    existingRecord.EvEbit = ParseDecimal("ev_ebit");
+    existingRecord.EvEbitda = ParseDecimal("ev_ebitda");
+    existingRecord.RevenueCagr5y = ParseDecimal("cagr_revenue");
+    existingRecord.ProfitCagr5y = ParseDecimal("cagr_profit");
+
     existingRecord.FiiType = ParseString("tipo_fii");
     existingRecord.Vacancy = ParseDecimal("vacancy");
     existingRecord.PropertiesCount = ParseInt("properties_count");
     existingRecord.ShareholdersCount = ParseDecimal("numero_cotistas");
+
+    // Map New FII Fields
+    existingRecord.DailyLiquidity = ParseDecimal("liquidity");
+    existingRecord.NetWorth = ParseDecimal("net_worth");
+    existingRecord.LastDividend = ParseDecimal("last_dividend");
     
     existingRecord.LastUpdatedAt = DateTime.UtcNow;
 
+    // Save changes to PostgreSQL
     if (isNewRecord)
         db.Fundamentals.Add(existingRecord);
     else
@@ -245,7 +299,8 @@ app.MapGet("/fundamentals/{assetType}/{symbol}", async (
 
     await db.SaveChangesAsync();
 
-        var responsePayload = new Dictionary<string, object?>
+    // 5. Build final DTO response payload
+    var responsePayload = new Dictionary<string, object?>
     {
         { "ticker", existingRecord.Ticker },
         { "sector", existingRecord.AssetType == "stock" ? existingRecord.SectorOrSegment : null },
@@ -256,12 +311,25 @@ app.MapGet("/fundamentals/{assetType}/{symbol}", async (
         { "roe", existingRecord.Roe },
         { "net_margin", existingRecord.NetMargin },
         { "debt_ebitda", existingRecord.DebtToEbitda },
-        { "cagr_5y", existingRecord.Cagr5y },
+        
+        // Include new fields in JSON output
+        { "market_cap", existingRecord.MarketCap },
+        { "ev_ebit", existingRecord.EvEbit },
+        { "ev_ebitda", existingRecord.EvEbitda },
+        { "cagr_revenue", existingRecord.RevenueCagr5y },
+        { "cagr_profit", existingRecord.ProfitCagr5y },
+        
         { "tipo_fii", existingRecord.FiiType },
         { "vacancy", existingRecord.Vacancy },
         { "properties_count", existingRecord.PropertiesCount },
         { "numero_cotistas", existingRecord.ShareholdersCount },
+        
+        { "liquidity", existingRecord.DailyLiquidity },
+        { "net_worth", existingRecord.NetWorth },
+        { "last_dividend", existingRecord.LastDividend },
         { "last_updated_at", existingRecord.LastUpdatedAt },
+        
+        // Placeholders to maintain UI consistency
         { "largest_tenant_pct", null },
         { "avg_contract_term", null },
         { "contract_type", null },
@@ -274,7 +342,6 @@ app.MapGet("/fundamentals/{assetType}/{symbol}", async (
     return Results.Ok(responsePayload);
 })
 .RequireRateLimiting("MarketPolicy");
-
 app.Run();
 
 // Expose the Program class to the Test Project
