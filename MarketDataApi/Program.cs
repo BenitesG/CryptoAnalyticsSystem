@@ -342,7 +342,123 @@ app.MapGet("/fundamentals/{assetType}/{symbol}", async (
     return Results.Ok(responsePayload);
 })
 .RequireRateLimiting("MarketPolicy");
+
+// ==========================================
+// USER AUTHENTICATION ENDPOINTS
+// ==========================================
+
+// Register a new user securely hashing the password
+app.MapPost("/users/register", async (RegisterRequest request, AppDbContext db) =>
+{
+    if (string.IsNullOrWhiteSpace(request.Username) || string.IsNullOrWhiteSpace(request.Password))
+    {
+        return Results.BadRequest(new { message = "Username and password are required." });
+    }
+
+    var normalizedUsername = request.Username.Trim().ToLowerInvariant();
+    var userExists = await db.Users.AnyAsync(u => u.Username.ToLower() == normalizedUsername);
+    
+    if (userExists)
+    {
+        return Results.Conflict(new { message = "Username is already taken." });
+    }
+
+    var user = new User
+    {
+        Username = request.Username.Trim(),
+        PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password) // Secure hashing via BCrypt
+    };
+
+    db.Users.Add(user);
+    await db.SaveChangesAsync();
+
+    return Results.Created($"/users/{user.Id}", new { id = user.Id, username = user.Username });
+});
+
+// Login endpoint verifying the hashed password
+app.MapPost("/users/login", async (LoginRequest request, AppDbContext db) =>
+{
+    var normalizedUsername = request.Username.Trim().ToLowerInvariant();
+    var user = await db.Users.FirstOrDefaultAsync(u => u.Username.ToLower() == normalizedUsername);
+    
+    if (user == null || !BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
+    {
+        return Results.Unauthorized();
+    }
+
+    return Results.Ok(new { id = user.Id, username = user.Username });
+});
+
+// ==========================================
+// PORTFOLIO MANAGEMENT ENDPOINTS
+// ==========================================
+
+// Add or update an asset in user's portfolio calculating the Weighted Average Price
+app.MapPost("/portfolios/add", async (AddAssetRequest request, AppDbContext db) =>
+{
+    var userExists = await db.Users.AnyAsync(u => u.Id == request.UserId);
+    if (!userExists) return Results.NotFound(new { message = "User not found." });
+
+    var normalizedTicker = request.Ticker.Trim().ToUpperInvariant();
+
+    var existingAsset = await db.UserAssets
+        .FirstOrDefaultAsync(a => a.UserId == request.UserId && a.Ticker == normalizedTicker);
+
+    if (existingAsset == null)
+    {
+        // First buy: Save exactly what was sent
+        var newAsset = new UserAsset
+        {
+            UserId = request.UserId,
+            Ticker = normalizedTicker,
+            Quantity = request.Quantity,
+            AveragePrice = request.AveragePrice
+        };
+        db.UserAssets.Add(newAsset);
+    }
+    else
+    {
+        // Subsequent buy: Recalculate Weighted Average Price (Real Financial Engineering)
+        decimal oldQty = existingAsset.Quantity;
+        decimal oldAvg = existingAsset.AveragePrice;
+        decimal newQty = oldQty + request.Quantity;
+
+        if (newQty > 0)
+        {
+            decimal newAvg = ((oldQty * oldAvg) + (request.Quantity * request.AveragePrice)) / newQty;
+            existingAsset.Quantity = newQty;
+            existingAsset.AveragePrice = Math.Round(newAvg, 4); // Standardize to 4 decimal places
+        }
+        db.UserAssets.Update(existingAsset);
+    }
+
+    await db.SaveChangesAsync();
+    return Results.Ok(new { message = "Asset successfully added/updated in portfolio." });
+});
+
+// Retrieve the complete portfolio for a specific user
+app.MapGet("/portfolios/{userId:guid}", async (Guid userId, AppDbContext db) =>
+{
+    var assets = await db.UserAssets
+        .Where(a => a.UserId == userId)
+        .Select(a => new {
+            a.Id,
+            a.Ticker,
+            a.Quantity,
+            a.AveragePrice,
+            total_invested = Math.Round(a.Quantity * a.AveragePrice, 2)
+        })
+        .ToListAsync();
+
+    return Results.Ok(assets);
+});
+
 app.Run();
+
+// --- PORTFOLIO & USER DTOs ---
+public record RegisterRequest(string Username, string Password);
+public record LoginRequest(string Username, string Password);
+public record AddAssetRequest(Guid UserId, string Ticker, decimal Quantity, decimal AveragePrice);
 
 // Expose the Program class to the Test Project
 public partial class Program { }
