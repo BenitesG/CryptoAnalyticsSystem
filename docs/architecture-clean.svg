@@ -19,7 +19,7 @@
   <rect x="440" y="125" width="92" height="28" rx="6" fill="#e9f0ff" />
   <text x="455" y="144" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="700" fill="#2f6fed">UI</text>
   <text x="440" y="175" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="600" fill="#1c2430">Streamlit Dashboard</text>
-  <text x="440" y="195" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#556070">Plotly charts + metrics</text>
+  <text x="440" y="195" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#556070">Plotly, Auth &amp; Portfolios</text>
 
   <!-- Row 2: C# Gateway (centered) -->
   <rect x="230" y="265" width="740" height="180" rx="16" fill="#ffffff" stroke="#d5dbe6" stroke-width="2" />
@@ -52,23 +52,24 @@
   <text x="800" y="560" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="600" fill="#1c2430">CoinGecko</text>
   <text x="800" y="582" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#556070">Crypto prices</text>
 
-  <!-- Row 4: Database -->
-  <rect x="820" y="700" width="220" height="110" rx="16" fill="#ffffff" stroke="#d5dbe6" stroke-width="2" />
-  <text x="840" y="745" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="600" fill="#1c2430">PostgreSQL</text>
-  <text x="840" y="768" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#556070">Search logs</text>
-  <text x="840" y="788" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#556070">Audit trails</text>
+  <!-- Row 4: Database (Updated Box size and content for users/portfolios) -->
+  <rect x="800" y="680" width="260" height="130" rx="16" fill="#ffffff" stroke="#d5dbe6" stroke-width="2" />
+  <text x="820" y="715" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="600" fill="#1c2430">PostgreSQL</text>
+  <text x="820" y="740" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#556070">Search Logs &amp; Audit Trails</text>
+  <text x="820" y="760" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#556070">User Portfolios (Qty &amp; Avg Price)</text>
+  <text x="820" y="780" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#556070">Secure BCrypt Password Hashes</text>
 
-  <!-- Lines -->
+  <!-- Lines (Adjusted DB Arrow) -->
   <path d="M340 160 L420 160" stroke="#8a97a8" stroke-width="2.5" fill="none" marker-end="url(#arrow)" />
   <path d="M570 215 L600 265" stroke="#8a97a8" stroke-width="2.5" fill="none" marker-end="url(#arrow)" />
   <path d="M520 445 L300 500" stroke="#8a97a8" stroke-width="2.5" fill="none" marker-end="url(#arrow)" />
   <path d="M650 445 L640 505" stroke="#8a97a8" stroke-width="2.5" fill="none" marker-end="url(#arrow)" />
   <path d="M760 445 L870 505" stroke="#8a97a8" stroke-width="2.5" fill="none" marker-end="url(#arrow)" />
-  <path d="M900 445 L900 700" stroke="#8a97a8" stroke-width="2.5" fill="none" marker-end="url(#arrow)" />
+  <path d="M900 445 L900 665" stroke="#8a97a8" stroke-width="2.5" fill="none" marker-end="url(#arrow)" />
 
   <text x="545" y="144" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#556070">HTTP GET</text>
   <text x="500" y="470" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#556070">Math + Fundamentals</text>
   <text x="600" y="480" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#556070">B3 Data</text>
   <text x="880" y="480" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#556070">Crypto Data</text>
-  <text x="940" y="690" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#556070">Logs & Persistence</text>
+  <text x="910" y="650" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#556070">Users, Portfolios &amp; Logs</text>
 </svg>
