@@ -143,8 +143,12 @@ def fetch_user_portfolio(user_id: str) -> list:
 # Helper to fetch current price from C# Gateway
 def get_live_price(ticker: str) -> float:
     try:
-        asset_type = "crypto" if ticker.lower() in ["bitcoin", "ethereum", "dogecoin"] else "stock"
-        response = requests.get(f"{API_URL}/price/{asset_type}/{ticker}", timeout=5)
+        is_crypto = ticker.lower() in ["bitcoin", "ethereum", "dogecoin"]
+        # Se for cripto, envia em minúsculo (bitcoin), se for ação envia em maiúsculo (PETR4)
+        normalized_ticker = ticker.lower() if is_crypto else ticker.upper().strip()
+        asset_type = "crypto" if is_crypto else "stock"
+        
+        response = requests.get(f"{API_URL}/price/{asset_type}/{normalized_ticker}", timeout=5)
         if response.status_code == 200:
             return float(response.json().get("price", 0.0))
     except Exception:
@@ -586,20 +590,30 @@ if st.session_state.logged_in and menu_selection == "💼 My Wallet":
                     st.dataframe(df_cryptos[display_cols], use_container_width=True, hide_index=True)
                     
             with grid_col2:
-                st.markdown("##### 🍕 Asset Allocation (Current Value)")
-                fig = px.pie(
-                    df_all, 
-                    values="raw_current_value", 
-                    names="Ticker",
-                    hole=0.4
-                )
-                fig.update_layout(
-                    plot_bgcolor="rgba(0,0,0,0)", 
-                    paper_bgcolor="rgba(0,0,0,0)",
-                    showlegend=True,
-                    margin=dict(t=0, b=0, l=0, r=0)
-                )
-                st.plotly_chart(fig, use_container_width=True)
+                    st.markdown("##### 🍕 Asset Allocation (Current Value)")
+                    fig = px.pie(
+                        df_all, 
+                        values="raw_current_value", 
+                        names="Ticker",
+                        hole=0.4
+                    )
+                    fig.update_layout(
+                        plot_bgcolor="rgba(0,0,0,0)", 
+                        paper_bgcolor="rgba(0,0,0,0)",
+                        showlegend=True,
+                        margin=dict(t=0, b=0, l=0, r=0)
+                    )
+                    st.plotly_chart(fig, use_container_width=True)
+                    
+                    st.markdown(" ") # Spacer
+                    csv_portfolio = df_all[display_cols].to_csv(index=False).encode('utf-8')
+                    st.download_button(
+                        label="📥 Download Portfolio Report (CSV)",
+                        data=csv_portfolio,
+                        file_name="my_portfolio_report.csv",
+                        mime="text/csv",
+                        use_container_width=True
+                    )
 
 # B. SEARCH MARKET LOGIC (Runs for everyone inside the Search Tab or if Guest)
 if btn_search:

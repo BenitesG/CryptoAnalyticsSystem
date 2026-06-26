@@ -23,7 +23,8 @@ namespace MarketDataApi.Services
 
         public async Task<object?> GetHistoryAsync(string coin)
         {
-            string cacheKey = $"hist_{coin}";
+            string normalizedCoin = coin.Trim().ToLowerInvariant();
+            string cacheKey = $"hist_{normalizedCoin}";
 
             var finalData = await _cache.GetOrCreateAsync(cacheKey, async (cacheOptions) =>
             {
@@ -31,7 +32,7 @@ namespace MarketDataApi.Services
 
                 _logger.LogInformation("Cache miss for {CacheKey}. Fetching history from CoinGecko.", cacheKey);
 
-                string url = $"https://api.coingecko.com/api/v3/coins/{coin}/market_chart?vs_currency=usd&days=7";
+                string url = $"https://api.coingecko.com/api/v3/coins/{normalizedCoin}/market_chart?vs_currency=usd&days=7";
 
                 string text;
                 try
@@ -40,18 +41,16 @@ namespace MarketDataApi.Services
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Failed to fetch history from CoinGecko for coin {Coin}.", coin);
+                    _logger.LogError(ex, "Failed to fetch history from CoinGecko for coin {Coin}.", normalizedCoin);
                     throw;
                 }
 
                 var optionsJson = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-
-                // Deserialize the response to get price data
                 var data = JsonSerializer.Deserialize<MarketChartResponse>(text, optionsJson);
 
                 if (data?.Prices == null || data.Prices.Count == 0)
                 {
-                    _logger.LogWarning("No price data returned from CoinGecko for coin {Coin}.", coin);
+                    _logger.LogWarning("No price data returned from CoinGecko for coin {Coin}.", normalizedCoin);
                     return null;
                 }
 
@@ -59,24 +58,22 @@ namespace MarketDataApi.Services
 
                 var pythonRequest = new PythonAnalyzeRequest
                 {
-                    CoinName = coin,
+                    CoinName = normalizedCoin,
                     Prices = onlyPrice
                 };
 
                 var jsonContent = new StringContent(JsonSerializer.Serialize(pythonRequest), System.Text.Encoding.UTF8, "application/json");
 
-                _logger.LogInformation("Calling Python analyze service for coin {Coin}.", coin);
+                _logger.LogInformation("Calling Python analyze service for coin {Coin}.", normalizedCoin);
 
                 try
                 {
                     var brainUrl = _config["MarketBrain:BaseUrl"] ?? "http://localhost:8000";
-                    
                     using var pythonResponse = await _httpClient.PostAsync($"{brainUrl}/analyze", jsonContent);
                     pythonResponse.EnsureSuccessStatusCode();
 
                     var pythonText = await pythonResponse.Content.ReadAsStringAsync();
                     var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-
                     var brainAnalysis = JsonSerializer.Deserialize<PythonAnalyzeResponse>(pythonText, options);
 
                     return new {
@@ -92,19 +89,18 @@ namespace MarketDataApi.Services
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Failed to get analysis from Python service for coin {Coin}.", coin);
+                    _logger.LogError(ex, "Failed to get analysis from Python service for coin {Coin}.", normalizedCoin);
                     throw;
                 }
-
             });
 
             return finalData;
         }
 
-        // Get current price of a specific coin, with caching for 1 minute
         public async Task<decimal?> GetPriceAsync(string coin)
         {
-            string cacheKey = $"price_{coin}";
+            string normalizedCoin = coin.Trim().ToLowerInvariant();
+            string cacheKey = $"price_{normalizedCoin}";
 
             var finalData = await _cache.GetOrCreateAsync(cacheKey, async (cacheOptions) =>
             {
@@ -112,7 +108,7 @@ namespace MarketDataApi.Services
 
                 _logger.LogInformation("Cache miss for {CacheKey}. Fetching price from CoinGecko.", cacheKey);
 
-                string url = $"https://api.coingecko.com/api/v3/simple/price?ids={coin}&vs_currencies=usd";
+                string url = $"https://api.coingecko.com/api/v3/simple/price?ids={normalizedCoin}&vs_currencies=usd";
 
                 string text;
                 try
@@ -121,21 +117,19 @@ namespace MarketDataApi.Services
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "Failed to fetch price from CoinGecko for coin {Coin}.", coin);
+                    _logger.LogError(ex, "Failed to fetch price from CoinGecko for coin {Coin}.", normalizedCoin);
                     throw;
                 }
 
                 var options = new JsonSerializerOptions { PropertyNameCaseInsensitive= true};
-
-                // Deserialize the response to get the current price
                 var data = JsonSerializer.Deserialize<Dictionary<string, Dictionary<string, decimal>>>(text, options);
 
-                if (data != null && data.ContainsKey(coin))
+                if (data != null && data.ContainsKey(normalizedCoin))
                 {
-                    return data[coin]["usd"];
+                    return data[normalizedCoin]["usd"];
                 }
 
-                _logger.LogWarning("Price not found in CoinGecko response for coin {Coin}.", coin);
+                _logger.LogWarning("Price not found in CoinGecko response for coin {Coin}.", normalizedCoin);
                 return (decimal?)null;
             });
 
