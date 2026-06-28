@@ -453,6 +453,40 @@ app.MapGet("/portfolios/{userId:guid}", async (Guid userId, AppDbContext db) =>
     return Results.Ok(assets);
 });
 
+app.MapPost("/portfolios/{userId}/analyze-ai", async (
+    Guid userId, // Mudamos de string para Guid aqui!
+    [FromServices] AppDbContext db, 
+    [FromServices] MarketBrainService brainService) =>
+{
+    // Agora a comparação funciona perfeitamente, pois ambos são do tipo Guid
+    var userAssets = await db.UserAssets
+        .Where(a => a.UserId == userId)
+        .ToListAsync();
+
+    if (!userAssets.Any())
+    {
+        return Results.BadRequest(new { message = "No assets found in this portfolio to analyze." });
+    }
+
+    // O restante do código permanece idêntico...
+    var assetsPayload = userAssets.Select(asset => new AssetAnalysisInput(
+        Ticker: asset.Ticker,
+        Quantity: (decimal)asset.Quantity,
+        AveragePrice: (decimal)asset.AveragePrice,
+        LivePrice: (decimal)asset.AveragePrice,
+        Pnl: 0.0m
+    )).ToList();
+
+    var analysisResult = await brainService.AnalyzePortfolioAsync(assetsPayload);
+
+    if (analysisResult == null)
+    {
+        return Results.StatusCode(500);
+    }
+
+    return Results.Ok(analysisResult);
+});
+
 app.Run();
 
 // --- PORTFOLIO & USER DTOs ---

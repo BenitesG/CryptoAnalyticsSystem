@@ -296,3 +296,26 @@ async def get_fundamentals_debug(ticker: str, asset_type: str = "fii"):
         "raw_label_count": len(raw_data),
         "raw_label_keys": sorted(raw_data.keys())
     }
+    
+class AssetInput(BaseModel):
+    ticker: str
+    quantity: float
+    average_price: float
+    live_price: float
+    pnl: float
+
+class PortfolioAnalysisRequest(BaseModel):
+    assets: List[AssetInput]
+
+@app.post("/analyze-portfolio")
+async def analyze_portfolio(payload: PortfolioAnalysisRequest):
+    try:
+        
+        total_assets = len(payload.assets)
+        
+        return {
+            "status": "success",
+            "analysis": f"Análise simulada: Recebidos {total_assets} ativos com sucesso para avaliação da IA."
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro interno no processamento: {str(e)}")
