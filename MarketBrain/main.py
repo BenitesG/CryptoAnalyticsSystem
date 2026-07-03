@@ -7,7 +7,8 @@ import logging
 import unicodedata
 from typing import Any, List
 import numpy as np
-import re
+import re 
+import os
 
 app = FastAPI()
 logger = logging.getLogger(__name__)
@@ -319,3 +320,13 @@ async def analyze_portfolio(payload: PortfolioAnalysisRequest):
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Erro interno no processamento: {str(e)}")
+    
+@app.get("/health/ai")
+async def ai_health_check():
+    """
+    Safely verifies if the Gemini API Key is loaded in the container environment.
+    """
+    api_key = os.getenv("GEMINI_API_KEY")
+    return {
+        "gemini_api_configured": api_key is not None and len(api_key) > 0
+    }
