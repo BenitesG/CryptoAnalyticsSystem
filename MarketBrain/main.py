@@ -301,8 +301,8 @@ async def get_fundamentals_debug(ticker: str, asset_type: str = "fii"):
 class AssetInput(BaseModel):
     ticker: str
     quantity: float
-    average_price: float
-    live_price: float
+    averagePrice: float  
+    livePrice: float     
     pnl: float
 
 class PortfolioAnalysisRequest(BaseModel):
@@ -311,15 +311,24 @@ class PortfolioAnalysisRequest(BaseModel):
 @app.post("/analyze-portfolio")
 async def analyze_portfolio(payload: PortfolioAnalysisRequest):
     try:
-        
         total_assets = len(payload.assets)
+        
+        portfolio_text = ""
+        for asset in payload.assets:
+            portfolio_text += (
+                f"- Ticker: {asset.ticker} | "
+                f"Qty: {asset.quantity} | "
+                f"Avg Price: R$ {asset.averagePrice:.2f} | "  
+                f"Current Price: R$ {asset.livePrice:.2f} | " 
+                f"P&L: R$ {asset.pnl:.2f}\n"
+            )
         
         return {
             "status": "success",
-            "analysis": f"Análise simulada: Recebidos {total_assets} ativos com sucesso para avaliação da IA."
+            "analysis": f"Analysis completed, {total_assets} assets processed:\n{portfolio_text}"
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Erro interno no processamento: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Internal error in processing: {str(e)}")
     
 @app.get("/health/ai")
 async def ai_health_check():
