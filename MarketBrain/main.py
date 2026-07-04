@@ -7,7 +7,9 @@ import logging
 import unicodedata
 from typing import Any, List
 import numpy as np
-import re
+import os
+import google.generativeai as genai 
+from typing import List
 
 app = FastAPI()
 logger = logging.getLogger(__name__)
@@ -295,4 +297,90 @@ async def get_fundamentals_debug(ticker: str, asset_type: str = "fii"):
         "raw_labels": raw_data,
         "raw_label_count": len(raw_data),
         "raw_label_keys": sorted(raw_data.keys())
+    }
+    
+class AssetInput(BaseModel):
+    ticker: str
+    quantity: float
+    averagePrice: float
+    livePrice: float
+    pnl: float
+
+class PortfolioAnalysisRequest(BaseModel):
+    assets: List[AssetInput]
+
+@app.post("/analyze-portfolio")
+async def analyze_portfolio(payload: PortfolioAnalysisRequest):
+    api_key = os.getenv("GEMINI_API_KEY")
+    if not api_key:
+        raise HTTPException(
+            status_code=500, 
+            detail="Gemini API Key is not configured in the environment variables."
+        )
+
+    try:
+        genai.configure(api_key=api_key)
+        
+        # We use Gemini 2.5 Flash (low latency, high intelligence, perfect for raw text analysis)
+        model = genai.GenerativeModel("gemini-2.5-flash")
+
+        portfolio_text = ""
+        for asset in payload.assets:
+            portfolio_text += (
+                f"- Ticker: {asset.ticker} | "
+                f"Quantity: {asset.quantity} | "
+                f"Average Price: ${asset.averagePrice:.2f} | "
+                f"Current Price: ${asset.livePrice:.2f} | "
+                f"P&L: ${asset.pnl:.2f}\n"
+            )
+
+        # 4. Construct a professional financial prompt in English
+        prompt = f"""
+        You are a certified senior investment analyst.
+        Analyze the following client asset portfolio and generate a highly professional audit report in English.
+        The output must be strictly formatted in clean, rich Markdown (using bold text, bullet points, and tables where applicable).
+
+        Client Portfolio Data:
+        {portfolio_text}
+
+        Your report must include the following mandatory sections:
+
+        ### 📊 1. Allocation & Diversification Audit
+        - Evaluate overall portfolio asset allocation and asset class balance.
+        - Identify any high concentration risks (overexposure to a single stock or crypto asset).
+
+        ### ⚖️ 2. Rebalancing & Risk Mitigation
+        - Provide clear suggestions on whether the client should perform partial sells or buys to rebalance exposure.
+        - Recommend capital allocation strategies prioritizing risk control and cash flow generation (if applicable).
+
+        ### 🛡️ 3. Strategic Recommendations & Disclaimer
+        - Provide 3 actionable next steps to protect the portfolio against market volatility.
+        - Include a clear standard financial disclaimer at the end stating that this analysis is purely educational and does not constitute official investment advice.
+        """
+
+        # 5. Generate content using the LLM model
+        response = model.generate_content(prompt)
+
+        # 6. Return the dynamic analysis string to the C# API
+        return {
+            "status": "success",
+            "analysis": response.text
+        }
+
+    except Exception as e:
+        print(f"🔴 GEMINI INTEGRATION ERROR DETAILS: {str(e)}")
+        
+        raise HTTPException(
+            status_code=500, 
+            detail=f"Error communicating with Gemini API: {str(e)}"
+        )
+    
+@app.get("/health/ai")
+async def ai_health_check():
+    """
+    Safely verifies if the Gemini API Key is loaded in the container environment.
+    """
+    api_key = os.getenv("GEMINI_API_KEY")
+    return {
+        "gemini_api_configured": api_key is not None and len(api_key) > 0
     }

@@ -614,6 +614,33 @@ if st.session_state.logged_in and menu_selection == "💼 My Wallet":
                         mime="text/csv",
                         use_container_width=True
                     )
+                    
+            st.divider()
+            st.subheader("🤖 AI Portfolio Assistant")
+            st.write("Click the button below to get an automated, professional AI audit of your asset allocation, risk metrics, and rebalancing recommendations.")
+
+            if st.button("🤖 Generate AI Portfolio Analysis", key="generate_ai_analysis", use_container_width=True):
+                user_id = st.session_state.get("user_id")
+                
+                if not user_id:
+                    st.error("User session not found. Please log in again.")
+                else:
+                    with st.spinner("Analyzing your portfolio assets... Please wait."):
+                        try:
+                            # Note que aqui usamos a constante global API_URL (com letras maiúsculas)
+                            response = requests.post(f"{API_URL}/portfolios/{user_id}/analyze-ai")
+                            
+                            if response.status_code == 200:
+                                data = response.json()
+                                st.success("Analysis generated successfully!")
+                                
+                                # Renderiza a resposta em Markdown largo na tela principal
+                                st.markdown(data.get("analysis", ""))
+                            else:
+                                st.error(f"Failed to generate analysis. API returned status: {response.status_code}")
+                        except Exception as e:
+                            st.error(f"Error communicating with the orchestrator: {str(e)}")
+
 
 # B. SEARCH MARKET LOGIC (Runs for everyone inside the Search Tab or if Guest)
 if btn_search:

@@ -32,7 +32,12 @@ services:
         condition: service_started
 
   brain:
-    build: ./MarketBrain
+    build: 
+      context: ./MarketBrain
+
+    environment:
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+
     expose:
       - "8000"
 

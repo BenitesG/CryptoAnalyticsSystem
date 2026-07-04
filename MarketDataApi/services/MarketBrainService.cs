@@ -1,6 +1,8 @@
 using System.Text.Json.Nodes;
 using Microsoft.Extensions.Caching.Memory;
 using System.Net;
+using System.Net.Http.Json;
+using MarketDataApi.Models;
 
 namespace MarketDataApi.Services
 {
@@ -42,6 +44,23 @@ namespace MarketDataApi.Services
 
                 return await response.Content.ReadFromJsonAsync<JsonObject>();
             });
+        }
+
+        public async Task<PortfolioAnalysisResponse?> AnalyzePortfolioAsync(List<AssetAnalysisInput> assets)
+        {
+            var payload = new PortfolioAnalysisRequest(assets);
+
+            // Dispara a requisição POST para o Python
+            var response = await _httpClient.PostAsJsonAsync("/analyze-portfolio", payload);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                // Se a chamada falhar, lançamos a exceção que o seu teste espera
+                throw new HttpRequestException($"MarketBrain service returned status {response.StatusCode}");
+            }
+
+            // Retorna o resultado parseado automaticamente do JSON
+            return await response.Content.ReadFromJsonAsync<PortfolioAnalysisResponse>();
         }
     }
 }

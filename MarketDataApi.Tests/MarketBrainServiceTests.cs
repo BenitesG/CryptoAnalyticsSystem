@@ -3,6 +3,7 @@ using MarketDataApi.Services;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
 using Moq;
+using MarketDataApi.Models;
 using Moq.Protected;
 
 namespace MarketDataApi.Tests
@@ -95,5 +96,77 @@ namespace MarketDataApi.Tests
                 ItExpr.IsAny<HttpRequestMessage>(),
                 ItExpr.IsAny<CancellationToken>());
         }
+        [Fact]
+        public async Task AnalyzePortfolioAsync_ShouldReturnAnalysis_WhenApiReturnsOk()
+        {
+            // Arrange
+            var handlerMock = new Mock<HttpMessageHandler>();
+            var responseJson = """{"status":"success","analysis":"Mocked AI analysis result"}""";
+
+            handlerMock.Protected()
+                .Setup<Task<HttpResponseMessage>>(
+                    "SendAsync",
+                    ItExpr.IsAny<HttpRequestMessage>(),
+                    ItExpr.IsAny<CancellationToken>())
+                .ReturnsAsync(new HttpResponseMessage
+                {
+                    StatusCode = HttpStatusCode.OK,
+                    Content = new StringContent(responseJson)
+                });
+
+            var httpClient = new HttpClient(handlerMock.Object)
+            {
+                BaseAddress = new Uri("http://localhost:8000")
+            };
+            var cache = new MemoryCache(new MemoryCacheOptions());
+            var loggerMock = new Mock<ILogger<MarketBrainService>>();
+            var service = new MarketBrainService(httpClient, cache, loggerMock.Object);
+
+            var assets = new List<AssetAnalysisInput>
+            {
+                new("WEGE3", 100, 35.50m, 38.00m, 250.00m)
+            };
+
+            // Act
+            var result = await service.AnalyzePortfolioAsync(assets);
+
+            // Assert
+            Assert.NotNull(result);
+            Assert.Equal("success", result?.Status);
+            Assert.Equal("Mocked AI analysis result", result?.Analysis);
+        }
+
+        [Fact]
+        public async Task AnalyzePortfolioAsync_ShouldThrow_WhenApiReturnsServerError()
+        {
+            // Arrange
+            var handlerMock = new Mock<HttpMessageHandler>();
+            handlerMock.Protected()
+                .Setup<Task<HttpResponseMessage>>(
+                    "SendAsync",
+                    ItExpr.IsAny<HttpRequestMessage>(),
+                    ItExpr.IsAny<CancellationToken>())
+                .ReturnsAsync(new HttpResponseMessage
+                {
+                    StatusCode = HttpStatusCode.InternalServerError
+                });
+
+            var httpClient = new HttpClient(handlerMock.Object)
+            {
+                BaseAddress = new Uri("http://localhost:8000")
+            };
+            var cache = new MemoryCache(new MemoryCacheOptions());
+            var loggerMock = new Mock<ILogger<MarketBrainService>>();
+            var service = new MarketBrainService(httpClient, cache, loggerMock.Object);
+
+            var assets = new List<AssetAnalysisInput>
+            {
+                new("WEGE3", 100, 35.50m, 38.00m, 250.00m)
+            };
+
+            // Act & Assert
+            await Assert.ThrowsAsync<HttpRequestException>(() => service.AnalyzePortfolioAsync(assets));
+        }
     }
 }
+
