@@ -50,5 +50,10 @@ services:
     depends_on:
       - api
 
+  cache:
+    image: redis:7-alpine
+    expose:
+      - "6379"
+
 volumes:
   postgres_data:
