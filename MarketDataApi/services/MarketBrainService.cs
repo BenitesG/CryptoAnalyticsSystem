@@ -84,7 +84,8 @@ namespace MarketDataApi.Services
             {
                 _logger.LogInformation("Cache HIT in Redis for portfolio analysis with Hash: {Hash}", hash);
                 
-                return JsonSerializer.Deserialize<PortfolioAnalysisResponse>(cachedData);
+                var jsonOptions = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+                return JsonSerializer.Deserialize<PortfolioAnalysisResponse>(cachedData, jsonOptions);
             }
 
             _logger.LogInformation("Cache MISS in Redis for portfolio analysis with Hash: {Hash}. Calling Python...", hash);

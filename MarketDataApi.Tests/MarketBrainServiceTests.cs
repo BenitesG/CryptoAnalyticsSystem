@@ -31,7 +31,12 @@ namespace MarketDataApi.Tests
             };
             var cache = new MemoryCache(new MemoryCacheOptions());
             var loggerMock = new Mock<ILogger<MarketBrainService>>();
-            var service = new MarketBrainService(httpClient, cache, loggerMock.Object);
+            
+            // Adicionado Mock para o Redis
+            var distributedCacheMock = new Mock<IDistributedCache>();
+            
+            // Passando os 4 parâmetros requeridos pelo novo construtor
+            var service = new MarketBrainService(httpClient, cache, distributedCacheMock.Object, loggerMock.Object);
 
             var result = await service.GetFundamentalsAsync("stock", "petr4");
 
@@ -58,7 +63,12 @@ namespace MarketDataApi.Tests
             };
             var cache = new MemoryCache(new MemoryCacheOptions());
             var loggerMock = new Mock<ILogger<MarketBrainService>>();
-            var service = new MarketBrainService(httpClient, cache, loggerMock.Object);
+            
+            // Adicionado Mock para o Redis
+            var distributedCacheMock = new Mock<IDistributedCache>();
+            
+            // Passando os 4 parâmetros
+            var service = new MarketBrainService(httpClient, cache, distributedCacheMock.Object, loggerMock.Object);
 
             await Assert.ThrowsAsync<HttpRequestException>(() => service.GetFundamentalsAsync("stock", "petr4"));
         }
@@ -84,7 +94,12 @@ namespace MarketDataApi.Tests
             };
             var cache = new MemoryCache(new MemoryCacheOptions());
             var loggerMock = new Mock<ILogger<MarketBrainService>>();
-            var service = new MarketBrainService(httpClient, cache, loggerMock.Object);
+            
+            // Adicionado Mock para o Redis
+            var distributedCacheMock = new Mock<IDistributedCache>();
+            
+            // Passando os 4 parâmetros
+            var service = new MarketBrainService(httpClient, cache, distributedCacheMock.Object, loggerMock.Object);
 
             var first = await service.GetFundamentalsAsync("stock", "petr4");
             var second = await service.GetFundamentalsAsync("stock", "petr4");
@@ -97,6 +112,7 @@ namespace MarketDataApi.Tests
                 ItExpr.IsAny<HttpRequestMessage>(),
                 ItExpr.IsAny<CancellationToken>());
         }
+
         [Fact]
         public async Task AnalyzePortfolioAsync_ShouldReturnAnalysis_WhenApiReturnsOk()
         {
@@ -121,7 +137,12 @@ namespace MarketDataApi.Tests
             };
             var cache = new MemoryCache(new MemoryCacheOptions());
             var loggerMock = new Mock<ILogger<MarketBrainService>>();
-            var service = new MarketBrainService(httpClient, cache, loggerMock.Object);
+            
+            // Adicionado Mock para o Redis
+            var distributedCacheMock = new Mock<IDistributedCache>();
+            
+            // Passando os 4 parâmetros
+            var service = new MarketBrainService(httpClient, cache, distributedCacheMock.Object, loggerMock.Object);
 
             var assets = new List<AssetAnalysisInput>
             {
@@ -158,7 +179,12 @@ namespace MarketDataApi.Tests
             };
             var cache = new MemoryCache(new MemoryCacheOptions());
             var loggerMock = new Mock<ILogger<MarketBrainService>>();
-            var service = new MarketBrainService(httpClient, cache, loggerMock.Object);
+            
+            // Adicionado Mock para o Redis
+            var distributedCacheMock = new Mock<IDistributedCache>();
+            
+            // Passando os 4 parâmetros
+            var service = new MarketBrainService(httpClient, cache, distributedCacheMock.Object, loggerMock.Object);
 
             var assets = new List<AssetAnalysisInput>
             {
@@ -187,7 +213,7 @@ namespace MarketDataApi.Tests
 
             distributedCacheMock
                 .Setup(c => c.GetAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-                .ReturnsAsync(cachedBytes);
+                .ReturnsAsync(cachedBytes); // simulando o Redis
 
             var service = new MarketBrainService(
                 httpClient, 
@@ -208,11 +234,10 @@ namespace MarketDataApi.Tests
             
             handlerMock.Protected().Verify(
                 "SendAsync",
-                Times.Never(), // Verifica se foi chamado ZERO vezes
+                Times.Never(),
                 ItExpr.IsAny<HttpRequestMessage>(),
                 ItExpr.IsAny<CancellationToken>()
             );
         }
     }
 }
-

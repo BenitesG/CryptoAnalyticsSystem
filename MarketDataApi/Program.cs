@@ -8,6 +8,10 @@ using Microsoft.AspNetCore.Mvc;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddMemoryCache();
+builder.Services.AddStackExchangeRedisCache(options =>
+{
+    options.Configuration = builder.Configuration.GetValue<string>("Redis:ConnectionString") ?? "cache:6379";
+});
 builder.Services.AddRateLimiter(options =>
 {
     options.AddFixedWindowLimiter("MarketPolicy", opt =>
