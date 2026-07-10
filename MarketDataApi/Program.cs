@@ -481,7 +481,7 @@ app.MapPost("/portfolios/{userId}/analyze-ai", async (
         Pnl: 0.0m
     )).ToList();
 
-    var analysisResult = await brainService.AnalyzePortfolioAsync(assetsPayload);
+    var analysisResult = await brainService.AnalyzePortfolioWithCacheAsync(assetsPayload);
 
     if (analysisResult == null)
     {
