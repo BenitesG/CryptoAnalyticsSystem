@@ -3,19 +3,31 @@ using Microsoft.Extensions.Caching.Memory;
 using System.Net;
 using System.Net.Http.Json;
 using MarketDataApi.Models;
+using Microsoft.Extensions.Caching.Distributed;
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
+
 
 namespace MarketDataApi.Services
 {
-    public class MarketBrainService
-    {
+        public class MarketBrainService 
+        {
         private readonly HttpClient _httpClient;
-        private readonly IMemoryCache _cache;
+        private readonly IMemoryCache _memoryCache;
+        private readonly IDistributedCache _distributedCache; 
         private readonly ILogger<MarketBrainService> _logger;
 
-        public MarketBrainService(HttpClient httpClient, IMemoryCache cache, ILogger<MarketBrainService> logger)
+        
+        public MarketBrainService(
+            HttpClient httpClient, 
+            IMemoryCache memoryCache, 
+            IDistributedCache distributedCache, 
+            ILogger<MarketBrainService> logger)
         {
             _httpClient = httpClient;
-            _cache = cache;
+            _memoryCache = memoryCache;
+            _distributedCache = distributedCache; 
             _logger = logger;
         }
 
@@ -26,7 +38,7 @@ namespace MarketDataApi.Services
             
             string cacheKey = $"fund_{normalizedType}_{normalizedTicker}";
 
-            return await _cache.GetOrCreateAsync(cacheKey, async (cacheOptions) =>
+            return await _memoryCache.GetOrCreateAsync(cacheKey, async (cacheOptions) =>
             {
                 cacheOptions.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10);
 
@@ -46,20 +58,66 @@ namespace MarketDataApi.Services
             });
         }
 
+        private string GeneratePortfolioHash(List<AssetAnalysisInput> assets)
+        {
+            var sortedAssets = assets.OrderBy(a => a.Ticker).ToList();
+            
+            var stateString = string.Join("|", sortedAssets.Select(a => 
+                $"{a.Ticker}:{a.Quantity}:{a.AveragePrice}:{a.LivePrice}"
+            ));
+
+            using var sha256 = SHA256.Create();
+            var bytes = Encoding.UTF8.GetBytes(stateString);
+            var hashBytes = sha256.ComputeHash(bytes);
+            
+            return Convert.ToHexString(hashBytes).ToLowerInvariant();
+        }
+
+        public async Task<PortfolioAnalysisResponse?> AnalyzePortfolioWithCacheAsync(List<AssetAnalysisInput> assets)
+        {
+            var hash = GeneratePortfolioHash(assets);
+            string cacheKey = $"portfolio_analysis_{hash}";
+
+            var cachedData = await _distributedCache.GetAsync(cacheKey);
+            
+            if (cachedData != null)
+            {
+                _logger.LogInformation("Cache HIT in Redis for portfolio analysis with Hash: {Hash}", hash);
+                
+                var jsonOptions = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+                return JsonSerializer.Deserialize<PortfolioAnalysisResponse>(cachedData, jsonOptions);
+            }
+
+            _logger.LogInformation("Cache MISS in Redis for portfolio analysis with Hash: {Hash}. Calling Python...", hash);
+
+            var response = await AnalyzePortfolioAsync(assets);
+
+            if (response != null)
+            {
+
+                var serializedData = JsonSerializer.SerializeToUtf8Bytes(response);
+                var cacheOptions = new DistributedCacheEntryOptions
+                {
+                    AbsoluteExpirationRelativeToNow = TimeSpan.FromHours(12)
+                };
+                
+                await _distributedCache.SetAsync(cacheKey, serializedData, cacheOptions);
+            }
+
+            return response;
+        }
+
         public async Task<PortfolioAnalysisResponse?> AnalyzePortfolioAsync(List<AssetAnalysisInput> assets)
         {
             var payload = new PortfolioAnalysisRequest(assets);
 
-            // Dispara a requisição POST para o Python
             var response = await _httpClient.PostAsJsonAsync("/analyze-portfolio", payload);
 
             if (!response.IsSuccessStatusCode)
             {
-                // Se a chamada falhar, lançamos a exceção que o seu teste espera
                 throw new HttpRequestException($"MarketBrain service returned status {response.StatusCode}");
             }
 
-            // Retorna o resultado parseado automaticamente do JSON
             return await response.Content.ReadFromJsonAsync<PortfolioAnalysisResponse>();
         }
     }

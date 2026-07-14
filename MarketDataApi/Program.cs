@@ -8,6 +8,10 @@ using Microsoft.AspNetCore.Mvc;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddMemoryCache();
+builder.Services.AddStackExchangeRedisCache(options =>
+{
+    options.Configuration = builder.Configuration.GetValue<string>("Redis:ConnectionString") ?? "cache:6379";
+});
 builder.Services.AddRateLimiter(options =>
 {
     options.AddFixedWindowLimiter("MarketPolicy", opt =>
@@ -477,7 +481,7 @@ app.MapPost("/portfolios/{userId}/analyze-ai", async (
         Pnl: 0.0m
     )).ToList();
 
-    var analysisResult = await brainService.AnalyzePortfolioAsync(assetsPayload);
+    var analysisResult = await brainService.AnalyzePortfolioWithCacheAsync(assetsPayload);
 
     if (analysisResult == null)
     {

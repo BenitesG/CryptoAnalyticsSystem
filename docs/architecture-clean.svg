@@ -1,75 +1,116 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="900" viewBox="0 0 1200 900">
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1000" viewBox="0 0 1200 1000">
   <defs>
     <marker id="arrow" markerWidth="10" markerHeight="8" refX="8" refY="4" orient="auto">
       <path d="M0,0 L10,4 L0,8 Z" fill="#8a97a8" />
     </marker>
   </defs>
 
-  <rect x="0" y="0" width="1200" height="900" fill="#f6f7fb" />
+  <rect x="0" y="0" width="1200" height="1000" fill="#f6f7fb" />
 
   <text x="40" y="50" font-family="Segoe UI, Arial, sans-serif" font-size="22" font-weight="700" fill="#1c2430">Multi-Asset Market Analytics System</text>
-  <text x="40" y="75" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#556070">C# Orchestrator + Python Analytics (Fundamentus)</text>
+  <text x="40" y="75" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#556070">Polyglot Microservices Architecture | Docker Container Network</text>
 
-  <!-- Row 1: User + UI -->
+  <!-- Row 1: User + UI (Streamlit) -->
   <rect x="120" y="120" width="220" height="80" rx="14" fill="#ffffff" stroke="#d5dbe6" stroke-width="2" />
   <text x="150" y="165" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="600" fill="#1c2430">User / Client</text>
-  <text x="150" y="185" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#556070">Multi-asset queries</text>
+  <text x="150" y="185" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#556070">Multi-asset portfolio queries</text>
 
-  <rect x="420" y="105" width="300" height="110" rx="14" fill="#ffffff" stroke="#d5dbe6" stroke-width="2" />
-  <rect x="440" y="125" width="92" height="28" rx="6" fill="#e9f0ff" />
-  <text x="455" y="144" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="700" fill="#2f6fed">UI</text>
-  <text x="440" y="175" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="600" fill="#1c2430">Streamlit Dashboard</text>
-  <text x="440" y="195" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#556070">Plotly, Auth &amp; Portfolios</text>
+  <rect x="470" y="105" width="300" height="110" rx="14" fill="#ffffff" stroke="#d5dbe6" stroke-width="2" />
+  <rect x="490" y="125" width="92" height="28" rx="6" fill="#e9f0ff" />
+  <text x="505" y="144" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="700" fill="#2f6fed">UI Container</text>
+  <text x="490" y="175" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="600" fill="#1c2430">Streamlit Dashboard</text>
+  <text x="490" y="195" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#556070">Plotly, Auth, Wallet &amp; AI Audit</text>
 
-  <!-- Row 2: C# Gateway (centered) -->
-  <rect x="230" y="265" width="740" height="180" rx="16" fill="#ffffff" stroke="#d5dbe6" stroke-width="2" />
-  <text x="260" y="300" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="600" fill="#1c2430">MarketDataApi (C# .NET 8)</text>
-  <rect x="260" y="320" width="220" height="42" rx="8" fill="#e9f0ff" />
-  <text x="274" y="346" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#556070">API Gateway / Router</text>
-  <rect x="500" y="320" width="210" height="42" rx="8" fill="#e9f0ff" />
-  <text x="514" y="346" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#556070">In-memory Cache</text>
-  <rect x="260" y="370" width="190" height="42" rx="8" fill="#e9f0ff" />
-  <text x="274" y="396" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#556070">Polly Retry</text>
-  <rect x="470" y="370" width="250" height="42" rx="8" fill="#e9f0ff" />
-  <text x="484" y="396" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#556070">EF Core + Audit Logs</text>
+  <!-- Row 2: C# Gateway & Orchestrator (MarketDataApi) -->
+  <rect x="120" y="265" width="960" height="190" rx="16" fill="#ffffff" stroke="#d5dbe6" stroke-width="2" />
+  <text x="150" y="300" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="600" fill="#1c2430">MarketDataApi (C# .NET 8 / Orchestrator Container)</text>
+  
+  <rect x="150" y="320" width="180" height="42" rx="8" fill="#e9f0ff" />
+  <text x="164" y="346" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#556070">API Gateway / Router</text>
+  
+  <rect x="350" y="320" width="160" height="42" rx="8" fill="#e9f0ff" />
+  <text x="364" y="346" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#556070">In-memory Cache</text>
 
-  <!-- Row 3: Python + External APIs -->
-  <rect x="120" y="500" width="360" height="200" rx="16" fill="#ffffff" stroke="#d5dbe6" stroke-width="2" />
-  <text x="150" y="535" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="600" fill="#1c2430">MarketBrain (Python)</text>
-  <rect x="150" y="555" width="160" height="38" rx="8" fill="#e9f0ff" />
-  <text x="164" y="579" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#556070">FastAPI Engine</text>
-  <rect x="150" y="605" width="160" height="38" rx="8" fill="#e9f0ff" />
-  <text x="164" y="629" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#556070">NumPy Signals</text>
-  <rect x="330" y="605" width="130" height="38" rx="8" fill="#e9f0ff" />
-  <text x="344" y="629" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#556070">BS4 Scraper</text>
-  <text x="150" y="665" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#556070">Fundamentus fundamentals</text>
+  <rect x="530" y="320" width="220" height="42" rx="8" fill="#e9f0ff" />
+  <text x="544" y="346" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#556070">Distributed Cache (Redis)</text>
+  
+  <rect x="150" y="380" width="180" height="42" rx="8" fill="#e9f0ff" />
+  <text x="164" y="406" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#556070">Polly Resilience / Retry</text>
+  
+  <rect x="350" y="380" width="220" height="42" rx="8" fill="#e9f0ff" />
+  <text x="364" y="406" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#556070">EF Core + Database Client</text>
 
-  <rect x="540" y="520" width="200" height="90" rx="14" fill="#ffffff" stroke="#d5dbe6" stroke-width="2" />
-  <text x="560" y="560" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="600" fill="#1c2430">Brapi API</text>
-  <text x="560" y="582" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#556070">B3 prices</text>
+  <rect x="590" y="380" width="220" height="42" rx="8" fill="#e9f0ff" />
+  <text x="604" y="406" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#556070">SHA256 State Hashing</text>
 
-  <rect x="780" y="520" width="200" height="90" rx="14" fill="#ffffff" stroke="#d5dbe6" stroke-width="2" />
-  <text x="800" y="560" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="600" fill="#1c2430">CoinGecko</text>
-  <text x="800" y="582" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#556070">Crypto prices</text>
+  <!-- Row 3: Engines & External APIs -->
+  <rect x="120" y="500" width="380" height="200" rx="16" fill="#ffffff" stroke="#d5dbe6" stroke-width="2" />
+  <text x="150" y="535" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="600" fill="#1c2430">MarketBrain (Python / FastAPI Container)</text>
+  
+  <rect x="140" y="555" width="150" height="38" rx="8" fill="#e9f0ff" />
+  <text x="154" y="579" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#556070">FastAPI Engine</text>
 
-  <!-- Row 4: Database (Updated Box size and content for users/portfolios) -->
-  <rect x="800" y="680" width="260" height="130" rx="16" fill="#ffffff" stroke="#d5dbe6" stroke-width="2" />
-  <text x="820" y="715" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="600" fill="#1c2430">PostgreSQL</text>
-  <text x="820" y="740" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#556070">Search Logs &amp; Audit Trails</text>
-  <text x="820" y="760" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#556070">User Portfolios (Qty &amp; Avg Price)</text>
-  <text x="820" y="780" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#556070">Secure BCrypt Password Hashes</text>
+  <rect x="300" y="555" width="180" height="38" rx="8" fill="#e9f0ff" />
+  <text x="314" y="579" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#556070">Gemini 2.5 SDK Client</text>
+  
+  <rect x="140" y="610" width="150" height="38" rx="8" fill="#e9f0ff" />
+  <text x="154" y="634" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#556070">NumPy Signals</text>
+  
+  <rect x="300" y="610" width="180" height="38" rx="8" fill="#e9f0ff" />
+  <text x="314" y="634" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#556070">BS4 Scraper (Fundamentus)</text>
 
-  <!-- Lines (Adjusted DB Arrow) -->
-  <path d="M340 160 L420 160" stroke="#8a97a8" stroke-width="2.5" fill="none" marker-end="url(#arrow)" />
-  <path d="M570 215 L600 265" stroke="#8a97a8" stroke-width="2.5" fill="none" marker-end="url(#arrow)" />
-  <path d="M520 445 L300 500" stroke="#8a97a8" stroke-width="2.5" fill="none" marker-end="url(#arrow)" />
-  <path d="M650 445 L640 505" stroke="#8a97a8" stroke-width="2.5" fill="none" marker-end="url(#arrow)" />
-  <path d="M760 445 L870 505" stroke="#8a97a8" stroke-width="2.5" fill="none" marker-end="url(#arrow)" />
-  <path d="M900 445 L900 665" stroke="#8a97a8" stroke-width="2.5" fill="none" marker-end="url(#arrow)" />
+  <rect x="540" y="500" width="200" height="90" rx="14" fill="#ffffff" stroke="#d5dbe6" stroke-width="2" />
+  <text x="560" y="540" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="600" fill="#1c2430">Brapi API</text>
+  <text x="560" y="562" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#556070">External B3 prices</text>
 
-  <text x="545" y="144" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#556070">HTTP GET</text>
-  <text x="500" y="470" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#556070">Math + Fundamentals</text>
-  <text x="600" y="480" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#556070">B3 Data</text>
-  <text x="880" y="480" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#556070">Crypto Data</text>
-  <text x="910" y="650" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#556070">Users, Portfolios &amp; Logs</text>
+  <rect x="780" y="500" width="200" height="90" rx="14" fill="#ffffff" stroke="#d5dbe6" stroke-width="2" />
+  <text x="800" y="540" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="600" fill="#1c2430">CoinGecko API</text>
+  <text x="800" y="562" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#556070">External Crypto prices</text>
+
+  <!-- Row 4: Persistence, Caching & External AI -->
+  <rect x="120" y="760" width="380" height="100" rx="14" fill="#fff5eb" stroke="#ffcb9a" stroke-width="2" />
+  <text x="150" y="795" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="600" fill="#b15600">Google Gemini API</text>
+  <text x="150" y="817" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#b15600">Cloud AI Model (Gemini 2.5 Flash)</text>
+  <text x="150" y="835" font-family="Segoe UI, Arial, sans-serif" font-size="11" fill="#c67a21">Generates Portfolio Audit Reports in Markdown</text>
+
+  <rect x="540" y="680" width="200" height="130" rx="16" fill="#ffffff" stroke="#d5dbe6" stroke-width="2" />
+  <text x="560" y="715" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="600" fill="#1c2430">Redis 7 (alpine)</text>
+  <text x="560" y="740" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#556070">In-memory Cache Store</text>
+  <text x="560" y="760" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#556070">Saves Portfolio Audits</text>
+  <text x="560" y="780" font-family="Segoe UI, Arial, sans-serif" font-size="11" fill="#7d8a9e">Expires in 12 hours</text>
+
+  <rect x="780" y="680" width="260" height="130" rx="16" fill="#ffffff" stroke="#d5dbe6" stroke-width="2" />
+  <text x="800" y="715" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="600" fill="#1c2430">PostgreSQL 15</text>
+  <text x="800" y="740" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#556070">Search Logs &amp; Audit Trails</text>
+  <text x="800" y="760" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#556070">User Portfolios (Qty &amp; Cost Basis)</text>
+  <text x="800" y="780" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#556070">Secure Password Hashes (BCrypt)</text>
+
+  <!-- Arrow Connections -->
+  <path d="M340 160 L470 160" stroke="#8a97a8" stroke-width="2.5" fill="none" marker-end="url(#arrow)" />
+  <path d="M620 215 L620 265" stroke="#8a97a8" stroke-width="2.5" fill="none" marker-end="url(#arrow)" />
+  
+  <!-- C# -> Python Brain -->
+  <path d="M310 455 L310 500" stroke="#8a97a8" stroke-width="2.5" fill="none" marker-end="url(#arrow)" />
+  
+  <!-- C# -> Redis Cache (Up and down connection) -->
+  <path d="M640 455 L640 680" stroke="#2f6fed" stroke-width="2.5" fill="none" marker-end="url(#arrow)" />
+  
+  <!-- C# -> External APIs -->
+  <path d="M650 455 L640 500" stroke="#8a97a8" stroke-width="2.5" fill="none" marker-end="url(#arrow)" />
+  <path d="M760 455 L870 500" stroke="#8a97a8" stroke-width="2.5" fill="none" marker-end="url(#arrow)" />
+  
+  <!-- C# -> PostgreSQL -->
+  <path d="M900 455 L900 680" stroke="#8a97a8" stroke-width="2.5" fill="none" marker-end="url(#arrow)" />
+  
+  <!-- Python Brain -> Google Gemini (Cloud) -->
+  <path d="M310 700 L310 760" stroke="#e07a5f" stroke-width="2.5" fill="none" marker-end="url(#arrow)" />
+
+  <!-- Descriptions on Arrows -->
+  <text x="390" y="144" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#556070">HTTP GET</text>
+  <text x="320" y="480" font-family="Segoe UI, Arial, sans-serif" font-size="11" fill="#556070">JSON Payload</text>
+  <text x="560" y="475" font-family="Segoe UI, Arial, sans-serif" font-size="11" fill="#556070">B3 Prices</text>
+  <text x="825" y="475" font-family="Segoe UI, Arial, sans-serif" font-size="11" fill="#556070">Crypto Prices</text>
+  <text x="910" y="650" font-family="Segoe UI, Arial, sans-serif" font-size="11" fill="#556070">Secure Transactions</text>
+  <text x="650" y="640" font-family="Segoe UI, Arial, sans-serif" font-size="11" fill="#2f6fed" font-weight="600">Cache Verification</text>
+  <text x="320" y="735" font-family="Segoe UI, Arial, sans-serif" font-size="11" fill="#e07a5f" font-weight="600">LLM Inference</text>
 </svg>
